@@ -36,8 +36,12 @@ static float vertices_indexed[] = {
     0.5f, -0.5f, 0.0f,       0.0f, 0.0f, 1.0f, 1.0f, // bot right
 };
 
-SDL_GPUBuffer* vertex_buffer;
-SDL_GPUTransferBuffer* transfer_buffer;
+static int indices[] = {
+    0, 1, 2,
+    2, 3, 0
+};
+
+SDL_GPUBuffer* vertex_buffer, *index_buffer;
 SDL_GPUGraphicsPipeline* graphics_pipeline;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
@@ -62,48 +66,77 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     // Vertex buffer
     SDL_GPUBufferCreateInfo buffer_info{};
     buffer_info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-    buffer_info.size = sizeof(vertices);
+    buffer_info.size = sizeof(vertices_indexed);
     buffer_info.props = 0;
 
     vertex_buffer = SDL_CreateGPUBuffer(device, &buffer_info);
-    SDL_SetGPUBufferName(device, vertex_buffer, "Triangle VB");
+    SDL_SetGPUBufferName(device, vertex_buffer, "Quad VB");
 
-    // Transfer buffer
-    SDL_GPUTransferBufferCreateInfo transfer_info{};
-    transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    transfer_info.size = sizeof(vertices);
-    transfer_info.props = 0;
+    SDL_GPUBufferCreateInfo index_buffer_info{};
+    index_buffer_info.usage = SDL_GPU_BUFFERUSAGE_INDEX;
+    index_buffer_info.size = sizeof(indices);
+    index_buffer_info.props = 0;
 
-    transfer_buffer = SDL_CreateGPUTransferBuffer(device, &transfer_info);
+    index_buffer = SDL_CreateGPUBuffer(device, &index_buffer_info);
+    SDL_SetGPUBufferName(device, index_buffer, "Quad IB");
 
-    // Upload data
+    // Transfer buffer - vertices
+    SDL_GPUTransferBufferCreateInfo vertex_transfer_info{};
+    vertex_transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    vertex_transfer_info.size = sizeof(vertices_indexed);
+    vertex_transfer_info.props = 0;
+
+    SDL_GPUTransferBuffer* vertex_transfer_buffer = SDL_CreateGPUTransferBuffer(device, &vertex_transfer_info);
     {
-        float* data = (float*)SDL_MapGPUTransferBuffer(device, transfer_buffer, false);
-        SDL_memcpy(data, vertices, sizeof(vertices));
-        SDL_UnmapGPUTransferBuffer(device, transfer_buffer);
+        float* data = (float*)SDL_MapGPUTransferBuffer(device, vertex_transfer_buffer, false);
+        SDL_memcpy(data, vertices_indexed, sizeof(vertices_indexed));
+        SDL_UnmapGPUTransferBuffer(device, vertex_transfer_buffer);
+    }
+
+    // Transfer buffer - indices
+    SDL_GPUTransferBufferCreateInfo index_transfer_info{};
+    index_transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    index_transfer_info.size = sizeof(indices);
+    index_transfer_info.props = 0;
+
+    SDL_GPUTransferBuffer* index_transfer_buffer = SDL_CreateGPUTransferBuffer(device, &index_transfer_info);
+    {
+        float* data = (float*)SDL_MapGPUTransferBuffer(device, index_transfer_buffer, false);
+        SDL_memcpy(data, indices, sizeof(indices));
+        SDL_UnmapGPUTransferBuffer(device, index_transfer_buffer);
     }
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
 
-    SDL_GPUTransferBufferLocation location{};
-    location.transfer_buffer = transfer_buffer;
-    location.offset = 0;
+    SDL_GPUTransferBufferLocation vertex_tblocation{};
+    vertex_tblocation.transfer_buffer = vertex_transfer_buffer;
+    vertex_tblocation.offset = 0;
 
-    SDL_GPUBufferRegion region{};
-    region.buffer = vertex_buffer;
-    region.size = sizeof(vertices);
-    region.offset = 0;
+    SDL_GPUBufferRegion vertex_bregion{};
+    vertex_bregion.buffer = vertex_buffer;
+    vertex_bregion.size = sizeof(vertices);
+    vertex_bregion.offset = 0;
 
-    SDL_UploadToGPUBuffer(copy_pass, &location, &region, false);
+    SDL_GPUTransferBufferLocation index_tblocation{};
+    index_tblocation.transfer_buffer = index_transfer_buffer;
+    index_tblocation.offset = 0;
+
+    SDL_GPUBufferRegion index_bregion{};
+    index_bregion.buffer = index_buffer;
+    index_bregion.size = sizeof(indices);
+    index_bregion.offset = 0;
+
+    SDL_UploadToGPUBuffer(copy_pass, &vertex_tblocation, &vertex_bregion, false);
+    SDL_UploadToGPUBuffer(copy_pass, &index_tblocation, &index_bregion, false);
+
     SDL_EndGPUCopyPass(copy_pass);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
     SDL_WaitForGPUIdle(device);
 
-    SDL_ReleaseGPUTransferBuffer(device, transfer_buffer);
-
-    // TODO: Index buffer
+    SDL_ReleaseGPUTransferBuffer(device, vertex_transfer_buffer);
+    SDL_ReleaseGPUTransferBuffer(device, index_transfer_buffer);
 
     Shader shader(device, "shaders/vertex.spv", "shaders/frag.spv");
 
@@ -213,11 +246,16 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     };
     SDL_BindGPUVertexBuffers(render_pass, 0, &buffer_binding, 1);
 
+    SDL_GPUBufferBinding index_buffer_binding = {
+        .buffer = index_buffer,
+        .offset = 0
+    };
+    SDL_BindGPUIndexBuffer(render_pass, &index_buffer_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+
     // Skipped: Texture binding
 
-    // SDL_PushGPUVertexUniformData(command_buffer, Uint32 slot_index, const void *data, Uint32 length)
-
-    SDL_DrawGPUPrimitives(render_pass, 6, 1, 0, 0);
+    //SDL_DrawGPUPrimitives(render_pass, 3, 1, 0, 0);
+    SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
 
     SDL_EndGPURenderPass(render_pass);
     SDL_SubmitGPUCommandBuffer(command_buffer);
@@ -237,6 +275,7 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     SDL_WaitForGPUIdle(device);
 
     SDL_ReleaseGPUBuffer(device, vertex_buffer);
+    SDL_ReleaseGPUBuffer(device, index_buffer);
     SDL_ReleaseGPUGraphicsPipeline(device, graphics_pipeline);
     SDL_DestroyGPUDevice(device);
     SDL_DestroyWindow(window);
