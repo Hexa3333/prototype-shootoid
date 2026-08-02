@@ -46,6 +46,11 @@ SDL_GPUGraphicsPipeline* graphics_pipeline;
 SDL_GPUTexture* texture;
 SDL_GPUSampler* sampler;
 
+struct Vector {
+    float x, y, z;
+};
+Vector vector;
+
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
 
@@ -64,6 +69,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     
     std::cout << "Has spirv: " << has_spirv << "\n"
               << "2D RGB unorm support: " << texture_format_supported << "\n";
+    vector.x = 0; vector.y = 0; vector.z = 0;
 
     // Vertex buffer
     SDL_GPUBufferCreateInfo buffer_info{};
@@ -322,9 +328,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 
     // Uniform
-    static float x = 0.0f;
-    SDL_PushGPUVertexUniformData(command_buffer, 0, &x, sizeof(float));
-    x += 0.01f;
+    SDL_PushGPUVertexUniformData(command_buffer, 0, &vector, sizeof(Vector));
 
     SDL_GPUBufferBinding buffer_binding = {
         .buffer = vertex_buffer,
@@ -357,6 +361,20 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
         return SDL_APP_SUCCESS;
+    }
+
+    if (event->type == SDL_EVENT_KEY_DOWN) {
+        if (event->key.key == SDLK_W) {
+            vector.y += 0.05f;
+        } else if (event->key.key == SDLK_S) {
+            vector.y -= 0.05f;
+        }
+
+        if (event->key.key == SDLK_D) {
+            vector.x += 0.05f;
+        } else if (event->key.key == SDLK_A) {
+            vector.x -= 0.05f;
+        }
     }
 
     return SDL_APP_CONTINUE;
