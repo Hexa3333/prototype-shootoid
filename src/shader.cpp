@@ -6,8 +6,11 @@
 #include <exception>
 #include <iostream>
 
+
 Shader::Shader(SDL_GPUDevice* device, const std::string& vertex_spv_path, const std::string& fragment_spv_path,
-           int num_samplers, int num_uniform_buffers, int num_storage_buffers, int num_storage_textures) : device(device) {
+               int vertex_num_samplers, int vertex_num_uniform_buffers, int vertex_num_storage_buffers, int vertex_num_storage_textures,
+               int frag_num_samplers, int frag_num_uniform_buffers, int frag_num_storage_buffers, int frag_num_storage_textures)
+              : device(device) {
     // Vertex
     size_t vertex_code_size;
     unsigned char* vertex_code = (unsigned char*)SDL_LoadFile(vertex_spv_path.data(), &vertex_code_size);
@@ -22,10 +25,10 @@ Shader::Shader(SDL_GPUDevice* device, const std::string& vertex_spv_path, const 
     vertex_info.entrypoint = "main";
     vertex_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
     vertex_info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
-    vertex_info.num_samplers = num_samplers;
-    vertex_info.num_storage_textures = num_storage_textures;
-    vertex_info.num_storage_buffers = num_storage_buffers;
-    vertex_info.num_uniform_buffers = num_uniform_buffers;
+    vertex_info.num_samplers = vertex_num_samplers;
+    vertex_info.num_uniform_buffers = vertex_num_uniform_buffers;
+    vertex_info.num_storage_buffers = vertex_num_storage_buffers;
+    vertex_info.num_storage_textures = vertex_num_storage_textures;
     vertex_info.props = 0;
 
     this->vertex_shader = SDL_CreateGPUShader(device, &vertex_info);
@@ -48,10 +51,10 @@ Shader::Shader(SDL_GPUDevice* device, const std::string& vertex_spv_path, const 
     frag_info.entrypoint = "main";
     frag_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
     frag_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
-    frag_info.num_samplers = num_samplers;
-    frag_info.num_storage_textures = num_storage_textures;
-    frag_info.num_storage_buffers = num_storage_buffers;
-    frag_info.num_uniform_buffers = num_uniform_buffers;
+    frag_info.num_samplers = frag_num_samplers;
+    frag_info.num_storage_textures = frag_num_storage_textures;
+    frag_info.num_storage_buffers = frag_num_storage_buffers;
+    frag_info.num_uniform_buffers = frag_num_uniform_buffers;
     frag_info.props = 0;
 
     this->fragment_shader = SDL_CreateGPUShader(device, &frag_info);

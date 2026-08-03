@@ -114,19 +114,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         SDL_UnmapGPUTransferBuffer(device, index_transfer_buffer);
     }
 
-    SDL_GPUTextureCreateInfo texture_info{};
-    texture_info.type = SDL_GPU_TEXTURETYPE_2D;
-    texture_info.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-    texture_info.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-    texture_info.width = 512;
-    texture_info.height = 512;
-    texture_info.layer_count_or_depth = 1;
-    texture_info.num_levels = 1;
-    texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
-    texture_info.props = 0;
-
-    SDL_GPUTexture* texture = SDL_CreateGPUTexture(device, &texture_info);
-    SDL_SetGPUTextureName(device, texture, "Albedo");
 
     SDL_Surface* surf = SDL_LoadPNG("assets/elf.png");
     if (!surf) {
@@ -135,6 +122,20 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     }
     SDL_Surface* rgba = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA8888);
     SDL_DestroySurface(surf);
+
+    SDL_GPUTextureCreateInfo texture_info{};
+    texture_info.type = SDL_GPU_TEXTURETYPE_2D;
+    texture_info.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+    texture_info.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    texture_info.width = rgba->w;
+    texture_info.height = rgba->h;
+    texture_info.layer_count_or_depth = 1;
+    texture_info.num_levels = 1;
+    texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
+    texture_info.props = 0;
+
+    texture = SDL_CreateGPUTexture(device, &texture_info);
+    SDL_SetGPUTextureName(device, texture, "Albedo");
 
     SDL_GPUTransferBufferCreateInfo texture_transfer_buffer_info{};
     texture_transfer_buffer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
@@ -189,8 +190,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_GPUTextureTransferInfo texture_ti{};
     texture_ti.transfer_buffer = texture_transfer_buffer;
     texture_ti.offset = 0;
-    texture_ti.pixels_per_row = rgba->w;
-    texture_ti.rows_per_layer = rgba->h;
+    texture_ti.pixels_per_row = 0;
+    texture_ti.rows_per_layer = 0;
 
     SDL_GPUTextureRegion texture_region{};
     texture_region.texture = texture;
@@ -205,7 +206,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     SDL_UploadToGPUBuffer(copy_pass, &vertex_tblocation, &vertex_bregion, false);
     SDL_UploadToGPUBuffer(copy_pass, &index_tblocation, &index_bregion, false);
-    //SDL_UploadToGPUTexture(copy_pass, &texture_ti, &texture_region, false);
+    SDL_UploadToGPUTexture(copy_pass, &texture_ti, &texture_region, false);
 
     SDL_EndGPUCopyPass(copy_pass);
 
@@ -214,11 +215,13 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     SDL_ReleaseGPUTransferBuffer(device, vertex_transfer_buffer);
     SDL_ReleaseGPUTransferBuffer(device, index_transfer_buffer);
-    //SDL_ReleaseGPUTransferBuffer(device, texture_transfer_buffer);
+    SDL_ReleaseGPUTransferBuffer(device, texture_transfer_buffer);
     SDL_DestroySurface(rgba);
 
-    Shader shader(device, "shaders/vertex.spv", "shaders/frag.spv", 0, 1);
-
+    Shader shader(device, "shaders/vertex.spv", "shaders/frag.spv",
+            0, 1, 0, 0,
+            1, 0, 0, 0
+            );
 
     SDL_GPUVertexBufferDescription vertex_buffer_descriptions[1];
     vertex_buffer_descriptions[0].slot = 0;
@@ -347,7 +350,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
         .texture = texture,
         .sampler = sampler
     };
-    //SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
+    SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
 
     //SDL_DrawGPUPrimitives(render_pass, 3, 1, 0, 0);
     SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
