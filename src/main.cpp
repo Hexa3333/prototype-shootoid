@@ -30,10 +30,10 @@ static float vertices[] = {
 
 static float vertices_indexed[] = {
 //   x     y     z            r     g     b     a         u     v
-    0.5f,  0.5f, 0.0f,       0.0f, 1.0f, 1.0f, 1.0f,     1.0f, 1.0f,     // top right
-   -0.5f,  0.5f, 0.0f,       1.0f, 0.0f, 0.0f, 1.0f,     0.0f, 1.0f,     // top left
-   -0.5f, -0.5f, 0.0f,       0.0f, 1.0f, 0.0f, 1.0f,     0.0f, 0.0f,     // bot left
-    0.5f, -0.5f, 0.0f,       0.0f, 0.0f, 1.0f, 1.0f,     1.0f, 0.0f,     // bot right
+    0.5f,  0.5f, 0.0f,       0.0f, 1.0f, 1.0f, 1.0f,     1.0f, 0.0f,     // top right
+   -0.5f,  0.5f, 0.0f,       1.0f, 0.0f, 0.0f, 1.0f,     0.0f, 0.0f,     // top left
+   -0.5f, -0.5f, 0.0f,       0.0f, 1.0f, 0.0f, 1.0f,     0.0f, 1.0f,     // bot left
+    0.5f, -0.5f, 0.0f,       0.0f, 0.0f, 1.0f, 1.0f,     1.0f, 1.0f,     // bot right
 };
 
 static int indices[] = {
@@ -248,6 +248,16 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     vertex_attributes[2].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
     vertex_attributes[2].offset = 7 * sizeof(float);
 
+                /*
+                .src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
+                .dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
+                .color_blend_op = SDL_GPU_BLENDOP_ADD,
+                .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
+                .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ZERO,
+                .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
+
+                .enable_blend = true,
+                */
 
     std::vector<SDL_GPUColorTargetDescription> color_target_desc;
     color_target_desc.push_back({
@@ -259,7 +269,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
                 .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
                 .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ZERO,
                 .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
-
+                .color_write_mask = SDL_GPU_COLORCOMPONENT_R | SDL_GPU_COLORCOMPONENT_G | SDL_GPU_COLORCOMPONENT_B | SDL_GPU_COLORCOMPONENT_A,
                 .enable_blend = true,
             }
             });
