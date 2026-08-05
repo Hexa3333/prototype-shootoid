@@ -8,13 +8,15 @@ layout (location = 0) out vec4 v_color;
 layout (location = 1) out vec2 v_uv;
 
 layout (binding = 0, set = 1) uniform Uniform {
-    vec3 position;
+    mat4 model;
+    mat4 view;
+    mat4 projection;
 } uni;
 
 
 void main()
 {
-    gl_Position = vec4(a_position + uni.position, 1.0f);
+    gl_Position = uni.projection * uni.view * uni.model * vec4(a_position, 1.0);
     v_color = a_color;
     v_uv = a_uv;
 }

@@ -3,12 +3,19 @@
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_surface.h>
 #include <cstring>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
 #include <iostream>
 #include <vector>
 
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL.h>
+
+#include <glm/glm.hpp>
+#include <glm/matrix.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "shader.hpp"
 
@@ -50,6 +57,13 @@ struct Vector {
     float x, y, z;
 };
 Vector vector;
+
+struct Uniform {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 projection;
+} uniform;
+
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
@@ -308,10 +322,20 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         std::cerr << "Failed to create graphics pipeline: " << SDL_GetError();
     }
 
+    uniform.model = glm::mat4(1.0f);
+    uniform.model = glm::rotate(uniform.model, glm::radians(45.0f), glm::vec3(1.0f,0,0));
+
+    uniform.view = glm::mat4(1.0f);
+    uniform.view = glm::translate(uniform.view, glm::vec3(0, 0, -3.0f));
+
+    uniform.projection = glm::mat4(1.0f);
+    uniform.projection = glm::perspective(glm::radians(45.0f), 720.0f / 480.0f, 0.1f, 100.0f);
+
     return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
+
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
 
     unsigned int width, height;
@@ -341,7 +365,13 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 
     // Uniform
-    SDL_PushGPUVertexUniformData(command_buffer, 0, &vector, sizeof(Vector));
+    //SDL_PushGPUVertexUniformData(command_buffer, 0, &vector, sizeof(Vector));
+    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
+    /*
+    SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(uniform.model), sizeof(glm::mat4));
+    SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(uniform.view), sizeof(glm::mat4));
+    SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(uniform.projection), sizeof(glm::mat4));
+    */
 
     SDL_GPUBufferBinding buffer_binding = {
         .buffer = vertex_buffer,
