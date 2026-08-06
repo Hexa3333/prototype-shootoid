@@ -29,6 +29,14 @@ void Buffer::bind_vertex_buffer(SDL_GPURenderPass* render_pass) {
     SDL_BindGPUVertexBuffers(render_pass, 0, &buffer_binding, 1);
 }
 
+const std::vector<SDL_GPUVertexBufferDescription>& Buffer::get_vertex_buffer_descriptions() const {
+    return vertex_buffer_descriptions;
+}
+
+const std::vector<SDL_GPUVertexAttribute>& Buffer::get_vertex_attributes() const {
+    return vertex_attributes;
+}
+
 void Buffer::create_vertex_buffer() {
     SDL_GPUBufferCreateInfo info;
     info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;

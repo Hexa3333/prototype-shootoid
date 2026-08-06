@@ -13,6 +13,9 @@ public:
     Buffer(SDL_GPUDevice* device, const std::vector<float>& data);
     void upload(SDL_GPUCopyPass* copy_pass);
     void bind_vertex_buffer(SDL_GPURenderPass* render_pass);
+    
+    const std::vector<SDL_GPUVertexBufferDescription>& get_vertex_buffer_descriptions() const;
+    const std::vector<SDL_GPUVertexAttribute>& get_vertex_attributes() const;
 private:
     // TODO: Name your buffers
     void create_vertex_buffer();
