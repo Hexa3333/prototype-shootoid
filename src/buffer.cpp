@@ -11,8 +11,9 @@ Buffer::Buffer(SDL_GPUDevice* device, const std::vector<float>& data) {
     create_upload_transfer_buffer();
 
     stage_for_upload(data);
-    auto location = get_location();
-    auto region = get_region();
+
+    create_vertex_buffer_attributes();
+    create_vertex_buffer_descriptions();
 }
 
 void Buffer::upload(SDL_GPUCopyPass* copy_pass) {

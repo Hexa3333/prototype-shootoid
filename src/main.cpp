@@ -18,62 +18,32 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "shader.hpp"
+#include "buffer.hpp"
 
 constexpr bool _DEBUG = true;
 
 SDL_Window* window;
 SDL_GPUDevice* device;
 
-static float vertices[] = {
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-};
-
 static int indices[] = {
     0, 1, 2,
     2, 3, 0
 };
 
-SDL_GPUBuffer* vertex_buffer, *index_buffer;
+std::vector<float> quad_vertices = {
+     0.5f,  0.5f,  0.0f, // top right
+    -0.5f,  0.5f,  0.0f, // top left
+     0.5f, -0.5f,  0.0f, // bot right
+
+     0.5f, -0.5f,  0.0f, // bot right
+    -0.5f,  0.5f,  0.0f, // top left
+    -0.5f, -0.5f,  0.0f, // bot left
+};
+
+Buffer* buffer_test;
+Shader* shader_test;
+
+SDL_GPUBuffer* index_buffer;
 SDL_GPUGraphicsPipeline* graphics_pipeline;
 SDL_GPUTexture* texture;
 SDL_GPUSampler* sampler;
@@ -111,15 +81,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
               << "2D RGB unorm support: " << texture_format_supported << "\n";
     vector.x = 0; vector.y = 0; vector.z = 0;
 
-    // Vertex buffer
-    SDL_GPUBufferCreateInfo buffer_info{};
-    buffer_info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-    buffer_info.size = sizeof(vertices);
-    buffer_info.props = 0;
-
-    vertex_buffer = SDL_CreateGPUBuffer(device, &buffer_info);
-    SDL_SetGPUBufferName(device, vertex_buffer, "Quad VB");
-
     SDL_GPUBufferCreateInfo index_buffer_info{};
     index_buffer_info.usage = SDL_GPU_BUFFERUSAGE_INDEX;
     index_buffer_info.size = sizeof(indices);
@@ -127,19 +88,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     index_buffer = SDL_CreateGPUBuffer(device, &index_buffer_info);
     SDL_SetGPUBufferName(device, index_buffer, "Quad IB");
-
-    // Transfer buffer - vertices
-    SDL_GPUTransferBufferCreateInfo vertex_transfer_info{};
-    vertex_transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    vertex_transfer_info.size = sizeof(vertices);
-    vertex_transfer_info.props = 0;
-
-    SDL_GPUTransferBuffer* vertex_transfer_buffer = SDL_CreateGPUTransferBuffer(device, &vertex_transfer_info);
-    {
-        float* data = (float*)SDL_MapGPUTransferBuffer(device, vertex_transfer_buffer, false);
-        SDL_memcpy(data, vertices, sizeof(vertices));
-        SDL_UnmapGPUTransferBuffer(device, vertex_transfer_buffer);
-    }
 
     // Transfer buffer - indices
     SDL_GPUTransferBufferCreateInfo index_transfer_info{};
@@ -202,19 +150,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     sampler = SDL_CreateGPUSampler(device, &sampler_info);
 
-
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
-
-    // VB transfer
-    SDL_GPUTransferBufferLocation vertex_tblocation{};
-    vertex_tblocation.transfer_buffer = vertex_transfer_buffer;
-    vertex_tblocation.offset = 0;
-
-    SDL_GPUBufferRegion vertex_bregion{};
-    vertex_bregion.buffer = vertex_buffer;
-    vertex_bregion.size = sizeof(vertices);
-    vertex_bregion.offset = 0;
 
     // IB transfer
     SDL_GPUTransferBufferLocation index_tblocation{};
@@ -244,7 +181,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     texture_region.h = rgba->h;
     texture_region.d = 1;
 
-    SDL_UploadToGPUBuffer(copy_pass, &vertex_tblocation, &vertex_bregion, false);
+    buffer_test = new Buffer(device, quad_vertices);
+
+    buffer_test->upload(copy_pass);
     SDL_UploadToGPUBuffer(copy_pass, &index_tblocation, &index_bregion, false);
     SDL_UploadToGPUTexture(copy_pass, &texture_ti, &texture_region, false);
 
@@ -253,7 +192,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_SubmitGPUCommandBuffer(command_buffer);
     SDL_WaitForGPUIdle(device);
 
-    SDL_ReleaseGPUTransferBuffer(device, vertex_transfer_buffer);
     SDL_ReleaseGPUTransferBuffer(device, index_transfer_buffer);
     SDL_ReleaseGPUTransferBuffer(device, texture_transfer_buffer);
     SDL_DestroySurface(rgba);
@@ -262,25 +200,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             0, 1, 0, 0,
             1, 0, 0, 0
             );
-
-    SDL_GPUVertexBufferDescription vertex_buffer_descriptions[1];
-    vertex_buffer_descriptions[0].slot = 0;
-    vertex_buffer_descriptions[0].pitch = 5 * sizeof(float);
-    vertex_buffer_descriptions[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-    vertex_buffer_descriptions[0].instance_step_rate = 0;
-
-    SDL_GPUVertexAttribute vertex_attributes[2];
-    // a_position
-    vertex_attributes[0].location = 0;
-    vertex_attributes[0].buffer_slot = 0;
-    vertex_attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
-    vertex_attributes[0].offset = 0;
-
-    // a_uv
-    vertex_attributes[1].location = 1;
-    vertex_attributes[1].buffer_slot = 0;
-    vertex_attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
-    vertex_attributes[1].offset = 3 * sizeof(float);
 
     std::vector<SDL_GPUColorTargetDescription> color_target_desc;
     color_target_desc.push_back({
@@ -298,15 +217,19 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             });
 
 
+    shader_test = new Shader(device, "shaders/test_vertex.spv", "shaders/test_frag.spv",
+            0,1,0,0,
+            0,0,0,0);
+
     SDL_GPUGraphicsPipelineCreateInfo pipeline_info{};
-    pipeline_info.vertex_shader = shader.vertex_shader;
-    pipeline_info.fragment_shader = shader.fragment_shader;
+    pipeline_info.vertex_shader = shader_test->vertex_shader;
+    pipeline_info.fragment_shader = shader_test->fragment_shader;
     pipeline_info.vertex_input_state = {
-        .vertex_buffer_descriptions = vertex_buffer_descriptions,
+        .vertex_buffer_descriptions = buffer_test->get_vertex_buffer_descriptions().data(),
         .num_vertex_buffers = 1,
 
-        .vertex_attributes = vertex_attributes,
-        .num_vertex_attributes = 2
+        .vertex_attributes = buffer_test->get_vertex_attributes().data(),
+        .num_vertex_attributes = 1
     };
     pipeline_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
     pipeline_info.rasterizer_state = {
@@ -399,7 +322,6 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     uniform.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
     rot += 1.0f;
     // Uniform
-    //SDL_PushGPUVertexUniformData(command_buffer, 0, &vector, sizeof(Vector));
     SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
     /*
     SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(uniform.model), sizeof(glm::mat4));
@@ -407,11 +329,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(uniform.projection), sizeof(glm::mat4));
     */
 
-    SDL_GPUBufferBinding buffer_binding = {
-        .buffer = vertex_buffer,
-        .offset = 0
-    };
-    SDL_BindGPUVertexBuffers(render_pass, 0, &buffer_binding, 1);
+    // NOTE: Buffers only show up in frames (renderdoc) if they're bound
+
+    buffer_test->bind_vertex_buffer(render_pass);
 
     SDL_GPUBufferBinding index_buffer_binding = {
         .buffer = index_buffer,
@@ -426,7 +346,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     };
     SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
 
-    SDL_DrawGPUPrimitives(render_pass, 36, 1, 0, 0);
+    SDL_DrawGPUPrimitives(render_pass, 6, 1, 0, 0);
     //SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
 
     SDL_EndGPURenderPass(render_pass);
@@ -484,7 +404,6 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     SDL_WaitForGPUIdle(device);
 
     SDL_ReleaseGPUTexture(device, depth_texture);
-    SDL_ReleaseGPUBuffer(device, vertex_buffer);
     SDL_ReleaseGPUBuffer(device, index_buffer);
     SDL_ReleaseGPUGraphicsPipeline(device, graphics_pipeline);
     SDL_DestroyGPUDevice(device);
