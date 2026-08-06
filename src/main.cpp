@@ -25,19 +25,17 @@ constexpr bool _DEBUG = true;
 SDL_Window* window;
 SDL_GPUDevice* device;
 
-static int indices[] = {
-    0, 1, 2,
-    2, 3, 0
-};
 
 std::vector<float> quad_vertices = {
-     0.5f,  0.5f,  0.0f, // top right
-    -0.5f,  0.5f,  0.0f, // top left
-     0.5f, -0.5f,  0.0f, // bot right
+     0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  // top right
+     0.5f, -0.5f,  0.0f, 1.0f, 1.0f,  // bot right
+    -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,  // bot left
+    -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  // top left
+};
 
-     0.5f, -0.5f,  0.0f, // bot right
-    -0.5f,  0.5f,  0.0f, // top left
-    -0.5f, -0.5f,  0.0f, // bot left
+std::vector<Uint32> quad_indices = {
+    0, 1, 3,
+    1, 2, 3
 };
 
 std::vector<float> cube_vertices = {
@@ -84,7 +82,8 @@ std::vector<float> cube_vertices = {
     -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 };
 
-Buffer* buffer_test;
+VertexBuffer* buffer_test;
+IndexBuffer* index_test;
 Shader* shader_test;
 
 SDL_GPUBuffer* index_buffer;
@@ -124,28 +123,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Has spirv: " << has_spirv << "\n"
               << "2D RGB unorm support: " << texture_format_supported << "\n";
     vector.x = 0; vector.y = 0; vector.z = 0;
-
-    SDL_GPUBufferCreateInfo index_buffer_info{};
-    index_buffer_info.usage = SDL_GPU_BUFFERUSAGE_INDEX;
-    index_buffer_info.size = sizeof(indices);
-    index_buffer_info.props = 0;
-
-    index_buffer = SDL_CreateGPUBuffer(device, &index_buffer_info);
-    SDL_SetGPUBufferName(device, index_buffer, "Quad IB");
-
-    // Transfer buffer - indices
-    SDL_GPUTransferBufferCreateInfo index_transfer_info{};
-    index_transfer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    index_transfer_info.size = sizeof(indices);
-    index_transfer_info.props = 0;
-
-    SDL_GPUTransferBuffer* index_transfer_buffer = SDL_CreateGPUTransferBuffer(device, &index_transfer_info);
-    {
-        float* data = (float*)SDL_MapGPUTransferBuffer(device, index_transfer_buffer, false);
-        SDL_memcpy(data, indices, sizeof(indices));
-        SDL_UnmapGPUTransferBuffer(device, index_transfer_buffer);
-    }
-
 
     SDL_Surface* surf = SDL_LoadPNG("assets/elf.png");
     if (!surf) {
@@ -194,18 +171,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     sampler = SDL_CreateGPUSampler(device, &sampler_info);
 
+    buffer_test = new VertexBuffer(device, quad_vertices);
+    index_test = new IndexBuffer(device, quad_indices);
+
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
-
-    // IB transfer
-    SDL_GPUTransferBufferLocation index_tblocation{};
-    index_tblocation.transfer_buffer = index_transfer_buffer;
-    index_tblocation.offset = 0;
-
-    SDL_GPUBufferRegion index_bregion{};
-    index_bregion.buffer = index_buffer;
-    index_bregion.size = sizeof(indices);
-    index_bregion.offset = 0;
 
     // Texture transfer - (PROBLEM HERE?)
     SDL_GPUTextureTransferInfo texture_ti{};
@@ -225,10 +195,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     texture_region.h = rgba->h;
     texture_region.d = 1;
 
-    buffer_test = new Buffer(device, cube_vertices);
-
     buffer_test->upload(copy_pass);
-    SDL_UploadToGPUBuffer(copy_pass, &index_tblocation, &index_bregion, false);
+    index_test->upload(copy_pass);
     SDL_UploadToGPUTexture(copy_pass, &texture_ti, &texture_region, false);
 
     SDL_EndGPUCopyPass(copy_pass);
@@ -236,7 +204,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_SubmitGPUCommandBuffer(command_buffer);
     SDL_WaitForGPUIdle(device);
 
-    SDL_ReleaseGPUTransferBuffer(device, index_transfer_buffer);
     SDL_ReleaseGPUTransferBuffer(device, texture_transfer_buffer);
     SDL_DestroySurface(rgba);
 
@@ -375,24 +342,17 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     // NOTE: Buffers only show up in frames (renderdoc) if they're bound
 
-    buffer_test->bind_vertex_buffer(render_pass);
+    buffer_test->bind(render_pass);
+    index_test->bind(render_pass);
 
-    SDL_GPUBufferBinding index_buffer_binding = {
-        .buffer = index_buffer,
-        .offset = 0
-    };
-    SDL_BindGPUIndexBuffer(render_pass, &index_buffer_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
-
-    // Skipped: Texture binding
     SDL_GPUTextureSamplerBinding tex_binding = {
         .texture = texture,
         .sampler = sampler
     };
     SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
 
-
-    buffer_test->draw(render_pass);
-    //SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
+    //buffer_test->draw(render_pass);
+    SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
 
     SDL_EndGPURenderPass(render_pass);
     SDL_SubmitGPUCommandBuffer(command_buffer);
