@@ -6,6 +6,8 @@
 #include <memory>
 
 
+// NOTE: Vertex oriented as of yet
+// TODO: Derived classes(?) for other stuff
 class Buffer {
 public:
     Buffer(SDL_GPUDevice* device, const std::vector<float>& data);
@@ -15,6 +17,8 @@ private:
     // TODO: Name your buffers
     void create_vertex_buffer();
     void create_upload_transfer_buffer();
+    void create_vertex_buffer_descriptions();
+    void create_vertex_buffer_attributes();
     SDL_GPUTransferBufferLocation get_location() const;
     SDL_GPUBufferRegion get_region() const;
 
@@ -45,4 +49,7 @@ private:
 private:
     std::unique_ptr<SDL_GPUBuffer, BufferDeleter> buffer;
     std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter> transfer_buffer;
+
+    std::vector<SDL_GPUVertexBufferDescription> vertex_buffer_descriptions;
+    std::vector<SDL_GPUVertexAttribute> vertex_attributes;
 };
