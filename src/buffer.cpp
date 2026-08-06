@@ -61,7 +61,7 @@ void Buffer::create_upload_transfer_buffer() {
 void Buffer::create_vertex_buffer_descriptions() {
     SDL_GPUVertexBufferDescription description1;
     description1.slot = 0;
-    description1.pitch = 3 * sizeof(float);
+    description1.pitch = 5 * sizeof(float);
     description1.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
     description1.instance_step_rate = 0;
 
@@ -75,7 +75,14 @@ void Buffer::create_vertex_buffer_attributes() {
     position.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
     position.offset = 0;
 
+    SDL_GPUVertexAttribute uv;
+    uv.location = 1;
+    uv.buffer_slot = 0;
+    uv.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+    uv.offset = 3 * sizeof(float);
+
     vertex_attributes.push_back(position);
+    vertex_attributes.push_back(uv);
 }
 
 SDL_GPUTransferBufferLocation Buffer::get_location() const {

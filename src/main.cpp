@@ -40,6 +40,50 @@ std::vector<float> quad_vertices = {
     -0.5f, -0.5f,  0.0f, // bot left
 };
 
+std::vector<float> cube_vertices = {
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+};
+
 Buffer* buffer_test;
 Shader* shader_test;
 
@@ -181,7 +225,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     texture_region.h = rgba->h;
     texture_region.d = 1;
 
-    buffer_test = new Buffer(device, quad_vertices);
+    buffer_test = new Buffer(device, cube_vertices);
 
     buffer_test->upload(copy_pass);
     SDL_UploadToGPUBuffer(copy_pass, &index_tblocation, &index_bregion, false);
@@ -217,9 +261,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             });
 
 
-    shader_test = new Shader(device, "shaders/test_vertex.spv", "shaders/test_frag.spv",
+    shader_test = new Shader(device, "shaders/vertex.spv", "shaders/frag.spv",
             0,1,0,0,
-            0,0,0,0);
+            1,0,0,0);
 
     SDL_GPUGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.vertex_shader = shader_test->vertex_shader;
@@ -229,7 +273,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         .num_vertex_buffers = 1,
 
         .vertex_attributes = buffer_test->get_vertex_attributes().data(),
-        .num_vertex_attributes = 1
+        .num_vertex_attributes = (Uint32)buffer_test->get_vertex_attributes().size()
     };
     pipeline_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
     pipeline_info.rasterizer_state = {
@@ -346,7 +390,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     };
     SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
 
-    SDL_DrawGPUPrimitives(render_pass, 6, 1, 0, 0);
+    SDL_DrawGPUPrimitives(render_pass, 36, 1, 0, 0);
     //SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
 
     SDL_EndGPURenderPass(render_pass);
