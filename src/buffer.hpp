@@ -74,6 +74,7 @@ public:
     IndexBuffer(SDL_GPUDevice* device, const std::vector<Uint32>& data);
     void upload(SDL_GPUCopyPass* copy_pass);
     void bind(SDL_GPURenderPass* render_pass);
+    void draw(SDL_GPURenderPass* render_pass);
 private:
     // TODO: Name your buffers
     void create_index_buffer();

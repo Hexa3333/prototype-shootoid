@@ -38,7 +38,7 @@ const std::vector<SDL_GPUVertexAttribute>& VertexBuffer::get_vertex_attributes()
     return vertex_attributes;
 }
 
-// May be problematic (doubt)
+// May be problematic (WARN)
 void VertexBuffer::draw(SDL_GPURenderPass* render_pass) {
     //Uint32 num_vertices = size / pitch;
     SDL_DrawGPUPrimitives(render_pass, 6, 1, 0, 0);
@@ -135,6 +135,12 @@ void IndexBuffer::bind(SDL_GPURenderPass* render_pass) {
         .offset = 0
     };
     SDL_BindGPUIndexBuffer(render_pass, &buffer_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+}
+
+// May be problematic (WARN)
+void IndexBuffer::draw(SDL_GPURenderPass* render_pass) {
+    Uint32 num_indices = size / sizeof(Uint32);
+    SDL_DrawGPUIndexedPrimitives(render_pass, num_indices, 1, 0, 0, 0);
 }
 
 void IndexBuffer::create_index_buffer() {

@@ -400,7 +400,8 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
 
     //buffer_test->draw(render_pass);
-    SDL_DrawGPUIndexedPrimitives(render_pass, 36, 1, 0, 0, 0);
+    index_test->draw(render_pass);
+    //SDL_DrawGPUIndexedPrimitives(render_pass, 36, 1, 0, 0, 0);
 
     SDL_EndGPURenderPass(render_pass);
     SDL_SubmitGPUCommandBuffer(command_buffer);
