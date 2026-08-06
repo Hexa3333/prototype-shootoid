@@ -390,7 +390,8 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     };
     SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
 
-    SDL_DrawGPUPrimitives(render_pass, 36, 1, 0, 0);
+
+    buffer_test->draw(render_pass);
     //SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
 
     SDL_EndGPURenderPass(render_pass);

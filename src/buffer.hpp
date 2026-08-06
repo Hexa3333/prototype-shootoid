@@ -16,6 +16,8 @@ public:
     
     const std::vector<SDL_GPUVertexBufferDescription>& get_vertex_buffer_descriptions() const;
     const std::vector<SDL_GPUVertexAttribute>& get_vertex_attributes() const;
+
+    void draw(SDL_GPURenderPass* render_pass);
 private:
     // TODO: Name your buffers
     void create_vertex_buffer();
@@ -31,8 +33,6 @@ private:
 private:
     // TODO: Device to shared_ptr
     SDL_GPUDevice* device;
-    Uint32 size;
-
     struct BufferDeleter {
         SDL_GPUDevice* device;
 
@@ -50,6 +50,8 @@ private:
     };
 
 private:
+    Uint32 size;
+    Uint32 pitch;
     std::unique_ptr<SDL_GPUBuffer, BufferDeleter> buffer;
     std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter> transfer_buffer;
 

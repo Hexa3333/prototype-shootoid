@@ -38,6 +38,12 @@ const std::vector<SDL_GPUVertexAttribute>& Buffer::get_vertex_attributes() const
     return vertex_attributes;
 }
 
+// May be problematic (doubt)
+void Buffer::draw(SDL_GPURenderPass* render_pass) {
+    Uint32 num_vertices = size / pitch;
+    SDL_DrawGPUPrimitives(render_pass, num_vertices, 1, 0, 0);
+}
+
 void Buffer::create_vertex_buffer() {
     SDL_GPUBufferCreateInfo info;
     info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
@@ -61,7 +67,7 @@ void Buffer::create_upload_transfer_buffer() {
 void Buffer::create_vertex_buffer_descriptions() {
     SDL_GPUVertexBufferDescription description1;
     description1.slot = 0;
-    description1.pitch = 5 * sizeof(float);
+    description1.pitch = (pitch = 5 * sizeof(float));
     description1.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
     description1.instance_step_rate = 0;
 
