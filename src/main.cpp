@@ -82,6 +82,54 @@ std::vector<float> cube_vertices = {
     -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 };
 
+std::vector<float> cube_vertices_indexed = {
+    // Front face (+Z)
+    -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+
+    // Back face (-Z)
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+
+    // Left face (-X)
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+
+    // Right face (+X)
+     0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+
+    // Top face (+Y)
+    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+
+    // Bottom face (-Y)
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+};
+
+std::vector<Uint32> cube_indices = {
+    0, 1, 2,   2, 3, 0,      // Front
+    4, 5, 6,   6, 7, 4,      // Back
+    8, 9, 10,  10, 11, 8,    // Left
+    12, 13, 14, 14, 15, 12,  // Right
+    16, 17, 18, 18, 19, 16,  // Top
+    20, 21, 22, 22, 23, 20,  // Bottom
+};
+
 VertexBuffer* buffer_test;
 IndexBuffer* index_test;
 Shader* shader_test;
@@ -171,8 +219,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     sampler = SDL_CreateGPUSampler(device, &sampler_info);
 
-    buffer_test = new VertexBuffer(device, quad_vertices);
-    index_test = new IndexBuffer(device, quad_indices);
+    buffer_test = new VertexBuffer(device, cube_vertices_indexed);
+    index_test = new IndexBuffer(device, cube_indices);
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
@@ -352,7 +400,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
 
     //buffer_test->draw(render_pass);
-    SDL_DrawGPUIndexedPrimitives(render_pass, 6, 1, 0, 0, 0);
+    SDL_DrawGPUIndexedPrimitives(render_pass, 36, 1, 0, 0, 0);
 
     SDL_EndGPURenderPass(render_pass);
     SDL_SubmitGPUCommandBuffer(command_buffer);
