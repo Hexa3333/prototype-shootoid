@@ -5,6 +5,7 @@
 #include <cstring>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/geometric.hpp>
 #include <iostream>
 #include <vector>
 
@@ -19,6 +20,7 @@
 
 #include "shader.hpp"
 #include "buffer.hpp"
+#include "camera.hpp"
 
 constexpr bool _DEBUG = true;
 
@@ -133,6 +135,7 @@ std::vector<Uint32> cube_indices = {
 VertexBuffer* buffer_test;
 IndexBuffer* index_test;
 Shader* shader_test;
+Camera* camera;
 
 SDL_GPUBuffer* index_buffer;
 SDL_GPUGraphicsPipeline* graphics_pipeline;
@@ -140,17 +143,11 @@ SDL_GPUTexture* texture;
 SDL_GPUSampler* sampler;
 SDL_GPUTexture* depth_texture;
 
-struct Vector {
-    float x, y, z;
-};
-Vector vector;
-
 struct Uniform {
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 projection;
 } uniform;
-
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
@@ -170,7 +167,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     
     std::cout << "Has spirv: " << has_spirv << "\n"
               << "2D RGB unorm support: " << texture_format_supported << "\n";
-    vector.x = 0; vector.y = 0; vector.z = 0;
 
     SDL_Surface* surf = SDL_LoadPNG("assets/elf.png");
     if (!surf) {
@@ -328,11 +324,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     uniform.model = glm::mat4(1.0f);
     uniform.model = glm::rotate(uniform.model, glm::radians(45.0f), glm::vec3(1.0f,0,0));
 
-    uniform.view = glm::mat4(1.0f);
-    uniform.view = glm::translate(uniform.view, glm::vec3(0, 0, -3.0f));
+    camera = new Camera();
 
     uniform.projection = glm::mat4(1.0f);
     uniform.projection = glm::perspective(glm::radians(45.0f), 720.0f / 480.0f, 0.1f, 100.0f);
+
 
     return SDL_APP_CONTINUE;
 }
@@ -381,6 +377,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     uniform.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
     rot += 1.0f;
     // Uniform
+    uniform.view = camera->update();
     SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
     /*
     SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(uniform.model), sizeof(glm::mat4));
@@ -439,15 +436,28 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
     if (event->type == SDL_EVENT_KEY_DOWN) {
         if (event->key.key == SDLK_W) {
-            vector.y += 0.05f;
+            glm::vec3 new_pos = camera->get_position() + glm::vec3(0, 0, 1.0f);
+            camera->set_position(new_pos);
         } else if (event->key.key == SDLK_S) {
-            vector.y -= 0.05f;
+            glm::vec3 new_pos = camera->get_position() - glm::vec3(0, 0, 1.0f);
+            camera->set_position(new_pos);
         }
 
         if (event->key.key == SDLK_D) {
-            vector.x += 0.05f;
+            glm::vec3 new_pos = camera->get_position() - glm::vec3(1.0f, 0, 0);
+            camera->set_position(new_pos);
         } else if (event->key.key == SDLK_A) {
-            vector.x -= 0.05f;
+            glm::vec3 new_pos = camera->get_position() + glm::vec3(1.0f, 0, 0);
+            camera->set_position(new_pos);
+        }
+
+
+        if (event->key.key == SDLK_UP) {
+            glm::vec3 new_pos = camera->get_position() + glm::vec3(0, 1.0f, 0);
+            camera->set_position(new_pos);
+        } else if (event->key.key == SDLK_DOWN) {
+            glm::vec3 new_pos = camera->get_position() - glm::vec3(0, 1.0f, 0);
+            camera->set_position(new_pos);
         }
     }
 
