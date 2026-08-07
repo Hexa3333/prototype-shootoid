@@ -138,7 +138,7 @@ Shader* shader_test;
 Camera* camera;
 
 SDL_GPUBuffer* index_buffer;
-SDL_GPUGraphicsPipeline* graphics_pipeline;
+SDL_GPUGraphicsPipeline* graphics_pipeline, *polygon_graphics_pipeline;
 SDL_GPUTexture* texture;
 SDL_GPUSampler* sampler;
 SDL_GPUTexture* depth_texture;
@@ -308,6 +308,40 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         std::cerr << "Failed to create graphics pipeline: " << SDL_GetError();
     }
 
+    /////
+    SDL_GPUGraphicsPipelineCreateInfo polygon_pipeline_info{};
+    polygon_pipeline_info.vertex_shader = shader_test->vertex_shader;
+    polygon_pipeline_info.fragment_shader = shader_test->fragment_shader;
+    polygon_pipeline_info.vertex_input_state = {
+        .vertex_buffer_descriptions = buffer_test->get_vertex_buffer_descriptions().data(),
+        .num_vertex_buffers = 1,
+
+        .vertex_attributes = buffer_test->get_vertex_attributes().data(),
+        .num_vertex_attributes = (Uint32)buffer_test->get_vertex_attributes().size()
+    };
+    polygon_pipeline_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+    polygon_pipeline_info.rasterizer_state = {
+        .fill_mode = SDL_GPU_FILLMODE_LINE,
+        .cull_mode = SDL_GPU_CULLMODE_NONE,
+        .front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
+    };
+    polygon_pipeline_info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
+    polygon_pipeline_info.depth_stencil_state.enable_depth_test = true;
+    polygon_pipeline_info.depth_stencil_state.enable_depth_write = true;
+
+    polygon_pipeline_info.target_info.color_target_descriptions = &color_target_desc[0];
+    polygon_pipeline_info.target_info.num_color_targets = 1;
+    polygon_pipeline_info.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
+    polygon_pipeline_info.target_info.has_depth_stencil_target = true;
+
+    polygon_pipeline_info.props = 0;
+
+
+    polygon_graphics_pipeline = SDL_CreateGPUGraphicsPipeline(device, &polygon_pipeline_info);
+    if (!graphics_pipeline) {
+        std::cerr << "Failed to create graphics pipeline: " << SDL_GetError();
+    }
+
     SDL_GPUTextureCreateInfo depth_texture_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
         .format = SDL_GPU_TEXTUREFORMAT_D16_UNORM,
@@ -345,11 +379,19 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
         return SDL_APP_CONTINUE;
     }
 
-    SDL_GPUColorTargetInfo color_target_info = {
-        .texture = swapchain_texture,
-        .clear_color = {255/255.0f, 140/255.0f, 140/255.0f, 1.0f},
-        .load_op = SDL_GPU_LOADOP_CLEAR,
-        .store_op = SDL_GPU_STOREOP_STORE,
+    SDL_GPUColorTargetInfo color_target_infos[2] = {
+        {
+            .texture = swapchain_texture,
+            .clear_color = {255/255.0f, 140/255.0f, 140/255.0f, 1.0f},
+            .load_op = SDL_GPU_LOADOP_CLEAR,
+            .store_op = SDL_GPU_STOREOP_STORE,
+        },
+        {
+            .texture = swapchain_texture,
+            .clear_color = {255/255.0f, 190/255.0f, 140/255.0f, 1.0f},
+            .load_op = SDL_GPU_LOADOP_LOAD,
+            .store_op = SDL_GPU_STOREOP_STORE,
+        }
     };
 
     // TODO: Fix Depth Buffer
@@ -362,8 +404,10 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
         .stencil_store_op = SDL_GPU_STOREOP_DONT_CARE,
     };
 
+    // DRAFT: Initial render pass might set things such as the background up,
+    // and the following passes do other things.
 
-    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_info, 1, &stencil_target_info);
+    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
     SDL_BindGPUGraphicsPipeline(render_pass, graphics_pipeline);
 
     SDL_GPUViewport viewport = {
@@ -372,35 +416,54 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     };
     SDL_SetGPUViewport(render_pass, &viewport);
 
-
-    static float rot = 0.0f;
-    uniform.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
-    rot += 1.0f;
-    // Uniform
-    uniform.view = camera->update();
-    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
-    /*
-    SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(uniform.model), sizeof(glm::mat4));
-    SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(uniform.view), sizeof(glm::mat4));
-    SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(uniform.projection), sizeof(glm::mat4));
-    */
-
-    // NOTE: Buffers only show up in frames (renderdoc) if they're bound
-
-    buffer_test->bind(render_pass);
-    index_test->bind(render_pass);
-
     SDL_GPUTextureSamplerBinding tex_binding = {
         .texture = texture,
         .sampler = sampler
     };
     SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
 
-    //buffer_test->draw(render_pass);
-    index_test->draw(render_pass);
-    //SDL_DrawGPUIndexedPrimitives(render_pass, 36, 1, 0, 0, 0);
+    static float rot = 0.0f;
+    uniform.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
+    // Uniform
+    uniform.view = camera->update();
+    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
 
+    // NOTE: Buffers only show up in frames (renderdoc) if they're bound
+
+    buffer_test->bind(render_pass);
+    index_test->bind(render_pass);
+
+    index_test->draw(render_pass);
+
+    uniform.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 1.5f, 0));
+    uniform.model = glm::rotate(uniform.model, glm::radians(-rot), glm::vec3(1.0f,0,0));
+    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
+    index_test->draw(render_pass);
+
+    rot += 1.0f;
     SDL_EndGPURenderPass(render_pass);
+
+    // Draw polygonized version to an image?
+    SDL_GPURenderPass* polygon_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
+    SDL_BindGPUGraphicsPipeline(polygon_render_pass, polygon_graphics_pipeline);
+    SDL_SetGPUViewport(polygon_render_pass, &viewport);
+    SDL_BindGPUFragmentSamplers(polygon_render_pass, 0, &tex_binding, 1);
+
+    uniform.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0,0));
+    uniform.model = glm::rotate(uniform.model, glm::radians(rot), glm::vec3(1.0f,0,0));
+
+    uniform.view = camera->update();
+    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
+
+    SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
+
+    buffer_test->bind(polygon_render_pass);
+    index_test->bind(polygon_render_pass);
+
+    index_test->draw(polygon_render_pass);
+
+    SDL_EndGPURenderPass(polygon_render_pass);
+
     SDL_SubmitGPUCommandBuffer(command_buffer);
 
     return SDL_APP_CONTINUE;
