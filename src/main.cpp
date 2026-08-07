@@ -440,7 +440,6 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
     index_test->draw(render_pass);
 
-    rot += 1.0f;
     SDL_EndGPURenderPass(render_pass);
 
     // Draw polygonized version to an image?
@@ -462,10 +461,16 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     index_test->draw(polygon_render_pass);
 
+    uniform.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 1.5f, 0));
+    uniform.model = glm::rotate(uniform.model, glm::radians(-rot), glm::vec3(1.0f,0,0));
+    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
+    index_test->draw(polygon_render_pass);
+
     SDL_EndGPURenderPass(polygon_render_pass);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
 
+    rot += 1.0f;
     return SDL_APP_CONTINUE;
 }
 
