@@ -137,10 +137,9 @@ VertexBuffer* buffer_test;
 IndexBuffer* index_test;
 Shader* shader_test;
 Camera* camera;
-Pipeline* pipeline_test;
+Pipeline* pipeline_test, *polygon_pipeline_test;
 
 SDL_GPUBuffer* index_buffer;
-SDL_GPUGraphicsPipeline* graphics_pipeline, *polygon_graphics_pipeline;
 SDL_GPUTexture* texture;
 SDL_GPUSampler* sampler;
 SDL_GPUTexture* depth_texture;
@@ -253,6 +252,10 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_ReleaseGPUTransferBuffer(device, texture_transfer_buffer);
     SDL_DestroySurface(rgba);
 
+    shader_test = new Shader(device, "shaders/vertex.spv", "shaders/frag.spv",
+            0,1,0,0,
+            1,0,0,0);
+
     std::vector<SDL_GPUColorTargetDescription> color_target_desc;
     color_target_desc.push_back({
             .format = SDL_GetGPUSwapchainTextureFormat(device, window),
@@ -268,79 +271,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             }
             });
 
-
-    shader_test = new Shader(device, "shaders/vertex.spv", "shaders/frag.spv",
-            0,1,0,0,
-            1,0,0,0);
-
-    SDL_GPUGraphicsPipelineCreateInfo pipeline_info{};
-    pipeline_info.vertex_shader = shader_test->vertex_shader;
-    pipeline_info.fragment_shader = shader_test->fragment_shader;
-    pipeline_info.vertex_input_state = {
-        .vertex_buffer_descriptions = buffer_test->get_vertex_buffer_descriptions().data(),
-        .num_vertex_buffers = 1,
-
-        .vertex_attributes = buffer_test->get_vertex_attributes().data(),
-        .num_vertex_attributes = (Uint32)buffer_test->get_vertex_attributes().size()
-    };
-    pipeline_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-    pipeline_info.rasterizer_state = {
-        .fill_mode = SDL_GPU_FILLMODE_FILL,
-        .cull_mode = SDL_GPU_CULLMODE_NONE,
-        .front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
-    };
-    pipeline_info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
-    pipeline_info.depth_stencil_state.enable_depth_test = true;
-    pipeline_info.depth_stencil_state.enable_depth_write = true;
-
-    pipeline_info.target_info.color_target_descriptions = &color_target_desc[0];
-    std::cout << "main.cpp pipeline color target: " << &color_target_desc[0] << "\n";
-    pipeline_info.target_info.num_color_targets = 1;
-    pipeline_info.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
-    pipeline_info.target_info.has_depth_stencil_target = true;
-
-    pipeline_info.props = 0;
-
-    graphics_pipeline = SDL_CreateGPUGraphicsPipeline(device, &pipeline_info);
-    if (!graphics_pipeline) {
-        std::cerr << "Failed to create graphics pipeline: " << SDL_GetError();
-    }
-
-    /////
-    SDL_GPUGraphicsPipelineCreateInfo polygon_pipeline_info{};
-    polygon_pipeline_info.vertex_shader = shader_test->vertex_shader;
-    polygon_pipeline_info.fragment_shader = shader_test->fragment_shader;
-    polygon_pipeline_info.vertex_input_state = {
-        .vertex_buffer_descriptions = buffer_test->get_vertex_buffer_descriptions().data(),
-        .num_vertex_buffers = 1,
-
-        .vertex_attributes = buffer_test->get_vertex_attributes().data(),
-        .num_vertex_attributes = (Uint32)buffer_test->get_vertex_attributes().size()
-    };
-    polygon_pipeline_info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-    polygon_pipeline_info.rasterizer_state = {
-        .fill_mode = SDL_GPU_FILLMODE_LINE,
-        .cull_mode = SDL_GPU_CULLMODE_NONE,
-        .front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
-    };
-    polygon_pipeline_info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
-    polygon_pipeline_info.depth_stencil_state.enable_depth_test = true;
-    polygon_pipeline_info.depth_stencil_state.enable_depth_write = true;
-
-    polygon_pipeline_info.target_info.color_target_descriptions = &color_target_desc[0];
-    polygon_pipeline_info.target_info.num_color_targets = 1;
-    polygon_pipeline_info.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
-    polygon_pipeline_info.target_info.has_depth_stencil_target = true;
-
-    polygon_pipeline_info.props = 0;
-
-
-    polygon_graphics_pipeline = SDL_CreateGPUGraphicsPipeline(device, &polygon_pipeline_info);
-    if (!polygon_graphics_pipeline) {
-        std::cerr << "Failed to create graphics pipeline: " << SDL_GetError();
-    }
-
     pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0]);
+    polygon_pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0], SDL_GPU_FILLMODE_LINE);
 
     SDL_GPUTextureCreateInfo depth_texture_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
@@ -407,7 +339,6 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     // DRAFT: Initial render pass might set things such as the background up,
     // and the following passes do other things.
 
-    // FIX (TODO): what is wrong with my pipeline_test?
     SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
     SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline_test));
 
@@ -445,7 +376,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     // Draw polygonized version to an image?
     SDL_GPURenderPass* polygon_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
-    SDL_BindGPUGraphicsPipeline(polygon_render_pass, polygon_graphics_pipeline);
+    SDL_BindGPUGraphicsPipeline(polygon_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*polygon_pipeline_test));
     SDL_SetGPUViewport(polygon_render_pass, &viewport);
     SDL_BindGPUFragmentSamplers(polygon_render_pass, 0, &tex_binding, 1);
 
@@ -538,8 +469,8 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
 
     SDL_ReleaseGPUTexture(device, depth_texture);
     SDL_ReleaseGPUBuffer(device, index_buffer);
-    SDL_ReleaseGPUGraphicsPipeline(device, graphics_pipeline);
-    SDL_ReleaseGPUGraphicsPipeline(device, polygon_graphics_pipeline);
+    delete pipeline_test;
+    delete polygon_pipeline_test;
     SDL_DestroyGPUDevice(device);
     SDL_DestroyWindow(window);
 }

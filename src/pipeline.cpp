@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-Pipeline::Pipeline(SDL_GPUDevice* _device, VertexBuffer* buffer, Shader* shader, SDL_GPUColorTargetDescription* desc) {
+Pipeline::Pipeline(SDL_GPUDevice* _device, VertexBuffer* buffer, Shader* shader, SDL_GPUColorTargetDescription* desc, SDL_GPUFillMode fill_mode) {
     device = _device;
 
     SDL_GPUGraphicsPipelineCreateInfo info{};
@@ -17,7 +17,7 @@ Pipeline::Pipeline(SDL_GPUDevice* _device, VertexBuffer* buffer, Shader* shader,
     };
     info.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
     info.rasterizer_state = {
-        .fill_mode = SDL_GPU_FILLMODE_FILL,
+        .fill_mode = fill_mode,
         .cull_mode = SDL_GPU_CULLMODE_NONE,
         .front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE
     };
@@ -39,4 +39,8 @@ Pipeline::Pipeline(SDL_GPUDevice* _device, VertexBuffer* buffer, Shader* shader,
     if (!pipeline_obj) {
         std::cerr << "Failed to create graphics pipeline: " << SDL_GetError();
     }
+}
+
+Pipeline::~Pipeline() {
+    SDL_ReleaseGPUGraphicsPipeline(device, pipeline_obj);
 }
