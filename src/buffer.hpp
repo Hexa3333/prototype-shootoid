@@ -33,6 +33,14 @@ struct TransferBufferDeleter {
     };
 };
 
+struct TextureBufferDeleter {
+    SDL_GPUDevice* device;
+
+    void operator()(SDL_GPUTexture* buffer) const {
+        SDL_ReleaseGPUTexture(device, buffer);
+    };
+};
+
 // NOTE: Vertex oriented as of yet
 // TODO: Derived classes(?) for other stuff
 class VertexBuffer {
@@ -90,5 +98,22 @@ private:
     Uint32 size;
     Uint32 pitch;
     std::unique_ptr<SDL_GPUBuffer, BufferDeleter> buffer;
+    std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter> transfer_buffer;
+};
+
+class TextureBuffer {
+public:
+    TextureBuffer(SDL_GPUDevice* device);
+private:
+    void create_texture_buffer();
+    void create_upload_transfer_buffer();
+
+    // Only uploads in a copy pass
+    // NOTE: Pixel formats matter
+    void stage_for_upload(const std::vector<Uint32>& data);
+private:
+    SDL_GPUDevice* device;
+    Uint32 size;
+    std::unique_ptr<SDL_GPUTexture, TextureBufferDeleter> texture;
     std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter> transfer_buffer;
 };

@@ -1,6 +1,7 @@
 #include "buffer.hpp"
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_stdinc.h>
+#include <memory>
 
 // Vertex Buffer
 VertexBuffer::VertexBuffer(SDL_GPUDevice* device, const std::vector<float>& data) {
@@ -179,5 +180,45 @@ SDL_GPUBufferRegion IndexBuffer::get_region() const {
 void IndexBuffer::stage_for_upload(const std::vector<Uint32>& data) {
     void* ptr = SDL_MapGPUTransferBuffer(device, transfer_buffer.get(), false);
     SDL_memcpy(ptr, data.data(), size);
+    SDL_UnmapGPUTransferBuffer(device, transfer_buffer.get());
+}
+
+
+TextureBuffer::TextureBuffer(SDL_GPUDevice* _device)
+ : device(_device) {
+     create_texture_buffer();
+     create_upload_transfer_buffer();
+
+}
+
+void TextureBuffer::create_texture_buffer() {
+    SDL_GPUTextureCreateInfo info;
+    info.type = SDL_GPU_TEXTURETYPE_2D;
+    info.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+    // INFO (TODO): Look here:
+    info.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    info.width = 1000;
+    info.height = 1000;
+    info.layer_count_or_depth = 1;
+    info.num_levels = 1;
+    info.sample_count = SDL_GPU_SAMPLECOUNT_1;
+    info.props = 0;
+
+    texture = std::unique_ptr<SDL_GPUTexture, TextureBufferDeleter>(SDL_CreateGPUTexture(device, &info));
+    SDL_SetGPUTextureName(device, texture.get(), "Created in class");
+}
+
+void TextureBuffer::create_upload_transfer_buffer() {
+    SDL_GPUTransferBufferCreateInfo info;
+    info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    info.size = 1000*1000;
+    info.props = 0;
+
+    transfer_buffer = std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter>(SDL_CreateGPUTransferBuffer(device, &info));
+}
+
+void TextureBuffer::stage_for_upload(const std::vector<Uint32>& data) {
+    void* ptr = SDL_MapGPUTransferBuffer(device, transfer_buffer.get(), false);
+    SDL_memcpy(ptr, data.data(), data.size() * sizeof(Uint32));
     SDL_UnmapGPUTransferBuffer(device, transfer_buffer.get());
 }
