@@ -2,10 +2,12 @@
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_surface.h>
+#include <cmath>
 #include <cstring>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/geometric.hpp>
+#include <glm/trigonometric.hpp>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -26,6 +28,7 @@
 #include "gameobject.hpp"
 
 constexpr bool _DEBUG = true;
+constexpr float NUMBER_PI = 3.14159f;
 
 SDL_Window* window;
 SDL_GPUDevice* device;
@@ -137,11 +140,14 @@ std::vector<Uint32> cube_indices = {
 
 VertexBuffer* buffer_test;
 IndexBuffer* index_test;
-TextureBuffer* texture_test, *texture_test2;
+TextureBuffer* texture_test;
 UniformMVP uniform_test;
 Shader* shader_test;
 Camera* camera;
 Pipeline* pipeline_test, *polygon_pipeline_test;
+// Viewport-aligned x and y coordinates
+float mouse_x, mouse_y;
+Uint32 window_width, window_height;
 
 SDL_GPUTexture* depth_texture;
 SDL_GPUSampler* sampler;
@@ -150,8 +156,12 @@ GameObject* gameobject_test;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
+    mouse_x = 0.0;
+    mouse_y = 0.0;
+    window_width = 720;
+    window_height = 480;
 
-    window = SDL_CreateWindow("shootoid", 720, 480, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow("shootoid", window_width, window_height, SDL_WINDOW_RESIZABLE);
     if ((device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, _DEBUG, "vulkan")) == NULL) {
         std::cerr << "Failed to create GPU Device.\n";
         return SDL_APP_FAILURE;
@@ -167,12 +177,12 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Has spirv: " << has_spirv << "\n"
               << "2D RGB unorm support: " << texture_format_supported << "\n";
 
-    SDL_Surface* surf = SDL_LoadPNG("assets/rei.png");
+    SDL_Surface* surf = SDL_LoadPNG("assets/elf.png");
     if (!surf) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
     }
-    SDL_Surface* surf2 = SDL_LoadPNG("assets/elf.png");
+    SDL_Surface* surf2 = SDL_LoadPNG("assets/rei.png");
     if (!surf2) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
@@ -200,11 +210,10 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     buffer_test = new VertexBuffer(device, cube_vertices_indexed);
     index_test = new IndexBuffer(device, cube_indices);
-    texture_test = new TextureBuffer(device, rgba);
-    texture_test2 = new TextureBuffer(device, rgba2);
+    texture_test = new TextureBuffer(device, rgba2);
     std::shared_ptr<VertexBuffer> shared_buffer_test(new VertexBuffer(device, cube_vertices_indexed));
     std::shared_ptr<IndexBuffer> shared_index_test(new IndexBuffer(device, cube_indices));
-    std::shared_ptr<TextureBuffer> shared_texture_test(new TextureBuffer(device, rgba2));
+    std::shared_ptr<TextureBuffer> shared_texture_test(new TextureBuffer(device, rgba));
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
@@ -212,7 +221,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     buffer_test->upload(copy_pass);
     index_test->upload(copy_pass);
     texture_test->upload(copy_pass);
-    texture_test2->upload(copy_pass);
 
     shared_buffer_test->upload(copy_pass);
     shared_index_test->upload(copy_pass);
@@ -226,7 +234,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_DestroySurface(rgba);
     SDL_DestroySurface(rgba2);
 
-    shader_test = new Shader(device, "shaders/vertex.spv", "shaders/frag.spv",
+    shader_test = new Shader(device, "build/shaders/vertex.spv", "build/shaders/frag.spv",
             0,2,0,0,
             1,0,0,0);
 
@@ -351,14 +359,13 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     // IDEA (TODO) for debug: Draw polygonized version to an image?
 
     SDL_GPURenderPass* gameobject_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
-    gameobject_test->uniform_mvp.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 2.0f, 0));
+    float distance_from_gameobject_x = mouse_x - 0.5f; // mouse_x - gameobject_x (NDC)
+    float distance_from_gameobject_y = mouse_y - 0.5f; // mouse_y - gameobject_y (NDC)
+    float angle = std::atan2(distance_from_gameobject_y, distance_from_gameobject_x);
+    gameobject_test->uniform_mvp.model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0,0,1));
     gameobject_test->uniform_mvp.view = camera->update();
     gameobject_test->uniform_mvp.projection = uniform_test.projection;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
-    gameobject_test->draw(command_buffer, gameobject_render_pass, &viewport);
-
-    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
-    gameobject_test->uniform_mvp.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, -2.0f, 0));
     gameobject_test->draw(command_buffer, gameobject_render_pass, &viewport);
 
     SDL_EndGPURenderPass(gameobject_render_pass);
@@ -375,20 +382,20 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     }
 
     if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-        Uint32 width =  (Uint32)event->window.data1;
-        Uint32 height = (Uint32)event->window.data2;
+        window_width =  (Uint32)event->window.data1;
+        window_height = (Uint32)event->window.data2;
 
         SDL_WaitForGPUIdle(device);
         SDL_ReleaseGPUTexture(device, depth_texture);
 
-        uniform_test.projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+        uniform_test.projection = glm::perspective(glm::radians(45.0f), (float)window_width / (float)window_height, 0.1f, 100.0f);
 
         SDL_GPUTextureCreateInfo depth_texture_info = {
             .type = SDL_GPU_TEXTURETYPE_2D,
             .format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
             .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
-            .width = width,
-            .height = height,
+            .width = window_width,
+            .height = window_height,
             .layer_count_or_depth = 1,
             .num_levels = 1,
             .sample_count = SDL_GPU_SAMPLECOUNT_1,
@@ -425,6 +432,16 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
             glm::vec3 new_pos = camera->get_position() - glm::vec3(0, 1.0f, 0);
             camera->set_position(new_pos);
         }
+    }
+
+    if (event->type == SDL_EVENT_MOUSE_MOTION) {
+        float x = event->motion.x;
+        float y = event->motion.y;
+        float xrel = event->motion.xrel;
+        float yrel = event->motion.yrel;
+
+        mouse_x = x / window_width;
+        mouse_y = y / window_height;
     }
 
     return SDL_APP_CONTINUE;

@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 Camera::Camera() {
-    position = glm::vec3(0, 0, -3.0f);
+    position = glm::vec3(0, 0, -10.0f);
 }
 
 glm::mat4 Camera::update() {
