@@ -204,7 +204,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     texture_test2 = new TextureBuffer(device, rgba2);
     std::shared_ptr<VertexBuffer> shared_buffer_test(new VertexBuffer(device, cube_vertices_indexed));
     std::shared_ptr<IndexBuffer> shared_index_test(new IndexBuffer(device, cube_indices));
-    std::shared_ptr<TextureBuffer> shared_texture_test(new TextureBuffer(device, rgba));
+    std::shared_ptr<TextureBuffer> shared_texture_test(new TextureBuffer(device, rgba2));
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
@@ -323,16 +323,14 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 
     SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
-
-
     SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline_test));
+    // NOTE: Buffers only show up in frames (renderdoc) if they're bound
 
     SDL_GPUViewport viewport = {
         .x = 0, .y = 0, .w = (float)width, .h = (float)height,
         .min_depth = 0.0f, .max_depth = 1.0f
     };
     SDL_SetGPUViewport(render_pass, &viewport);
-
 
     texture_test->bind(render_pass, sampler);
 
@@ -343,53 +341,24 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     static float extra = 0.0f;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
 
-    // NOTE: Buffers only show up in frames (renderdoc) if they're bound
-
     buffer_test->bind(render_pass);
     index_test->bind(render_pass);
 
     index_test->draw(render_pass);
 
-    uniform_test.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 1.5f, 0));
-    uniform_test.model = glm::rotate(uniform_test.model, glm::radians(-rot), glm::vec3(1.0f,0,0));
-    uniform_test.push(command_buffer);
-    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
-    index_test->draw(render_pass);
-
     SDL_EndGPURenderPass(render_pass);
 
-    // Draw polygonized version to an image?
-    SDL_GPURenderPass* polygon_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
-    SDL_BindGPUGraphicsPipeline(polygon_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*polygon_pipeline_test));
-    SDL_SetGPUViewport(polygon_render_pass, &viewport);
-    texture_test2->bind(render_pass, sampler);
-
-    uniform_test.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0,0));
-    uniform_test.model = glm::rotate(uniform_test.model, glm::radians(rot), glm::vec3(1.0f,0,0));
-
-    uniform_test.view = camera->update();
-    uniform_test.push(command_buffer);
-    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
-
-    texture_test2->bind(render_pass, sampler);
-
-    buffer_test->bind(polygon_render_pass);
-    index_test->bind(polygon_render_pass);
-
-    index_test->draw(polygon_render_pass);
-
-    uniform_test.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 1.5f, 0));
-    uniform_test.model = glm::rotate(uniform_test.model, glm::radians(-rot), glm::vec3(1.0f,0,0));
-    uniform_test.push(command_buffer);
-    index_test->draw(polygon_render_pass);
-
-    SDL_EndGPURenderPass(polygon_render_pass);
+    // IDEA (TODO) for debug: Draw polygonized version to an image?
 
     SDL_GPURenderPass* gameobject_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
     gameobject_test->uniform_mvp.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 2.0f, 0));
     gameobject_test->uniform_mvp.view = camera->update();
     gameobject_test->uniform_mvp.projection = uniform_test.projection;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
+    gameobject_test->draw(command_buffer, gameobject_render_pass, &viewport);
+
+    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
+    gameobject_test->uniform_mvp.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, -2.0f, 0));
     gameobject_test->draw(command_buffer, gameobject_render_pass, &viewport);
 
     SDL_EndGPURenderPass(gameobject_render_pass);
