@@ -136,18 +136,13 @@ std::vector<Uint32> cube_indices = {
 VertexBuffer* buffer_test;
 IndexBuffer* index_test;
 TextureBuffer* texture_test;
+UniformMVP uniform_test;
 Shader* shader_test;
 Camera* camera;
 Pipeline* pipeline_test, *polygon_pipeline_test;
 
 SDL_GPUTexture* depth_texture;
 SDL_GPUSampler* sampler;
-
-struct Uniform {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 projection;
-} uniform;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
@@ -245,13 +240,13 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     depth_texture = SDL_CreateGPUTexture(device, &depth_texture_info);
 
-    uniform.model = glm::mat4(1.0f);
-    uniform.model = glm::rotate(uniform.model, glm::radians(45.0f), glm::vec3(1.0f,0,0));
+    uniform_test.model = glm::mat4(1.0f);
+    uniform_test.model = glm::rotate(uniform_test.model, glm::radians(45.0f), glm::vec3(1.0f,0,0));
 
     camera = new Camera();
 
-    uniform.projection = glm::mat4(1.0f);
-    uniform.projection = glm::perspective(glm::radians(45.0f), 720.0f / 480.0f, 0.1f, 100.0f);
+    uniform_test.projection = glm::mat4(1.0f);
+    uniform_test.projection = glm::perspective(glm::radians(45.0f), 720.0f / 480.0f, 0.1f, 100.0f);
 
 
     return SDL_APP_CONTINUE;
@@ -309,10 +304,10 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     texture_test->bind(render_pass, sampler);
 
     static float rot = 0.0f;
-    uniform.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
-    // Uniform
-    uniform.view = camera->update();
-    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
+    uniform_test.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
+    uniform_test.view = camera->update();
+    uniform_test.push(command_buffer);
+    //SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
 
     // NOTE: Buffers only show up in frames (renderdoc) if they're bound
 
@@ -321,9 +316,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     index_test->draw(render_pass);
 
-    uniform.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 1.5f, 0));
-    uniform.model = glm::rotate(uniform.model, glm::radians(-rot), glm::vec3(1.0f,0,0));
-    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
+    uniform_test.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 1.5f, 0));
+    uniform_test.model = glm::rotate(uniform_test.model, glm::radians(-rot), glm::vec3(1.0f,0,0));
+    uniform_test.push(command_buffer);
     index_test->draw(render_pass);
 
     SDL_EndGPURenderPass(render_pass);
@@ -334,11 +329,11 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_SetGPUViewport(polygon_render_pass, &viewport);
     texture_test->bind(render_pass, sampler);
 
-    uniform.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0,0));
-    uniform.model = glm::rotate(uniform.model, glm::radians(rot), glm::vec3(1.0f,0,0));
+    uniform_test.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0,0));
+    uniform_test.model = glm::rotate(uniform_test.model, glm::radians(rot), glm::vec3(1.0f,0,0));
 
-    uniform.view = camera->update();
-    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
+    uniform_test.view = camera->update();
+    uniform_test.push(command_buffer);
 
     texture_test->bind(render_pass, sampler);
 
@@ -347,9 +342,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     index_test->draw(polygon_render_pass);
 
-    uniform.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 1.5f, 0));
-    uniform.model = glm::rotate(uniform.model, glm::radians(-rot), glm::vec3(1.0f,0,0));
-    SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
+    uniform_test.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 1.5f, 0));
+    uniform_test.model = glm::rotate(uniform_test.model, glm::radians(-rot), glm::vec3(1.0f,0,0));
+    uniform_test.push(command_buffer);
     index_test->draw(polygon_render_pass);
 
     SDL_EndGPURenderPass(polygon_render_pass);
@@ -372,7 +367,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         SDL_WaitForGPUIdle(device);
         SDL_ReleaseGPUTexture(device, depth_texture);
 
-        uniform.projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+        uniform_test.projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
 
         SDL_GPUTextureCreateInfo depth_texture_info = {
             .type = SDL_GPU_TEXTURETYPE_2D,
