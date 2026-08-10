@@ -184,11 +184,25 @@ void IndexBuffer::stage_for_upload(const std::vector<Uint32>& data) {
 }
 
 
-TextureBuffer::TextureBuffer(SDL_GPUDevice* _device)
- : device(_device) {
+TextureBuffer::TextureBuffer(SDL_GPUDevice* _device, SDL_Surface* _surface)
+ : device(_device), surface(_surface) {
      create_texture_buffer();
      create_upload_transfer_buffer();
 
+     stage_for_upload();
+}
+
+void TextureBuffer::upload(SDL_GPUCopyPass* copy_pass) {
+    auto source = get_transfer_info();
+    auto destination = get_region();
+    SDL_UploadToGPUTexture(copy_pass, &source, &destination, false);
+}
+
+void TextureBuffer::bind(SDL_GPURenderPass* render_pass) {
+    SDL_GPUTextureSamplerBinding binding;
+    binding.texture = texture.get();
+    //binding.sampler = sampler.get();
+    SDL_BindGPUFragmentSamplers(render_pass, 0, &binding, 1);
 }
 
 void TextureBuffer::create_texture_buffer() {
@@ -197,8 +211,8 @@ void TextureBuffer::create_texture_buffer() {
     info.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
     // INFO (TODO): Look here:
     info.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-    info.width = 1000;
-    info.height = 1000;
+    info.width = surface->w;
+    info.height = surface->h;
     info.layer_count_or_depth = 1;
     info.num_levels = 1;
     info.sample_count = SDL_GPU_SAMPLECOUNT_1;
@@ -211,14 +225,38 @@ void TextureBuffer::create_texture_buffer() {
 void TextureBuffer::create_upload_transfer_buffer() {
     SDL_GPUTransferBufferCreateInfo info;
     info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    info.size = 1000*1000;
+    info.size = surface->pitch * surface->h;
     info.props = 0;
 
     transfer_buffer = std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter>(SDL_CreateGPUTransferBuffer(device, &info));
 }
 
-void TextureBuffer::stage_for_upload(const std::vector<Uint32>& data) {
+
+SDL_GPUTextureTransferInfo TextureBuffer::get_transfer_info() const {
+    SDL_GPUTextureTransferInfo info;
+    info.transfer_buffer = transfer_buffer.get();
+    info.offset = 0;
+    info.pixels_per_row = 0;
+    info.rows_per_layer = 0;
+    return info;
+}
+
+SDL_GPUTextureRegion TextureBuffer::get_region() const {
+    SDL_GPUTextureRegion region;
+    region.texture = texture.get();
+    region.mip_level = 0;
+    region.layer = 0;
+    region.x = 0;
+    region.y = 0;
+    region.z = 0;
+    region.w = surface->w;
+    region.h = surface->h;
+    region.d = 0;
+    return region;
+}
+
+void TextureBuffer::stage_for_upload() {
     void* ptr = SDL_MapGPUTransferBuffer(device, transfer_buffer.get(), false);
-    SDL_memcpy(ptr, data.data(), data.size() * sizeof(Uint32));
+    SDL_memcpy(ptr, surface->pixels, surface->pitch);
     SDL_UnmapGPUTransferBuffer(device, transfer_buffer.get());
 }

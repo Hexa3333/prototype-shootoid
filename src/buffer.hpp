@@ -103,17 +103,24 @@ private:
 
 class TextureBuffer {
 public:
-    TextureBuffer(SDL_GPUDevice* device);
+    TextureBuffer(SDL_GPUDevice* device, SDL_Surface* surface);
+
+    void upload(SDL_GPUCopyPass* copy_pass);
+    void bind(SDL_GPURenderPass* render_pass);
 private:
     void create_texture_buffer();
     void create_upload_transfer_buffer();
 
+    SDL_GPUTextureTransferInfo get_transfer_info() const;
+    SDL_GPUTextureRegion get_region() const;
+
     // Only uploads in a copy pass
     // NOTE: Pixel formats matter
-    void stage_for_upload(const std::vector<Uint32>& data);
+    void stage_for_upload();
 private:
     SDL_GPUDevice* device;
     Uint32 size;
     std::unique_ptr<SDL_GPUTexture, TextureBufferDeleter> texture;
     std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter> transfer_buffer;
+    SDL_Surface* surface;
 };
