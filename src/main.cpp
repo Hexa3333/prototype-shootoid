@@ -1,4 +1,3 @@
-#include "pipeline.hpp"
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_stdinc.h>
@@ -8,6 +7,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/geometric.hpp>
 #include <iostream>
+#include <memory>
 #include <vector>
 
 #define SDL_MAIN_USE_CALLBACKS
@@ -22,6 +22,8 @@
 #include "shader.hpp"
 #include "buffer.hpp"
 #include "camera.hpp"
+#include "pipeline.hpp"
+#include "gameobject.hpp"
 
 constexpr bool _DEBUG = true;
 
@@ -144,6 +146,8 @@ Pipeline* pipeline_test, *polygon_pipeline_test;
 SDL_GPUTexture* depth_texture;
 SDL_GPUSampler* sampler;
 
+GameObject* gameobject_test;
+
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
 
@@ -198,6 +202,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     index_test = new IndexBuffer(device, cube_indices);
     texture_test = new TextureBuffer(device, rgba);
     texture_test2 = new TextureBuffer(device, rgba2);
+    std::shared_ptr<VertexBuffer> shared_buffer_test(new VertexBuffer(device, cube_vertices_indexed));
+    std::shared_ptr<IndexBuffer> shared_index_test(new IndexBuffer(device, cube_indices));
+    std::shared_ptr<TextureBuffer> shared_texture_test(new TextureBuffer(device, rgba));
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
@@ -206,6 +213,10 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     index_test->upload(copy_pass);
     texture_test->upload(copy_pass);
     texture_test2->upload(copy_pass);
+
+    shared_buffer_test->upload(copy_pass);
+    shared_index_test->upload(copy_pass);
+    shared_texture_test->upload(copy_pass);
 
     SDL_EndGPUCopyPass(copy_pass);
 
@@ -236,6 +247,13 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0]);
     polygon_pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0], SDL_GPU_FILLMODE_LINE);
+
+    std::shared_ptr<Pipeline> shared_pipeline(new Pipeline(device, shared_buffer_test.get(), shader_test, &color_target_desc[0]));
+    gameobject_test = new GameObject(shared_buffer_test,
+            shared_index_test,
+            shared_texture_test,
+            sampler,
+            shared_pipeline);
 
     SDL_GPUTextureCreateInfo depth_texture_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
@@ -302,7 +320,11 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     // DRAFT: Initial render pass might set things such as the background up,
     // and the following passes do other things.
 
+
+
     SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
+
+
     SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline_test));
 
     SDL_GPUViewport viewport = {
@@ -310,6 +332,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
         .min_depth = 0.0f, .max_depth = 1.0f
     };
     SDL_SetGPUViewport(render_pass, &viewport);
+
 
     texture_test->bind(render_pass, sampler);
 
@@ -361,6 +384,15 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     index_test->draw(polygon_render_pass);
 
     SDL_EndGPURenderPass(polygon_render_pass);
+
+    SDL_GPURenderPass* gameobject_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
+    gameobject_test->uniform_mvp.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 2.0f, 0));
+    gameobject_test->uniform_mvp.view = camera->update();
+    gameobject_test->uniform_mvp.projection = uniform_test.projection;
+    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
+    gameobject_test->draw(command_buffer, gameobject_render_pass, &viewport);
+
+    SDL_EndGPURenderPass(gameobject_render_pass);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
 
