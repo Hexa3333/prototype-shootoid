@@ -135,7 +135,7 @@ std::vector<Uint32> cube_indices = {
 
 VertexBuffer* buffer_test;
 IndexBuffer* index_test;
-TextureBuffer* texture_test;
+TextureBuffer* texture_test, *texture_test2;
 UniformMVP uniform_test;
 Shader* shader_test;
 Camera* camera;
@@ -168,8 +168,15 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
     }
+    SDL_Surface* surf2 = SDL_LoadPNG("assets/elf.png");
+    if (!surf2) {
+        std::cerr << "Failed to load image.\n";
+        return SDL_APP_FAILURE;
+    }
     SDL_Surface* rgba = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* rgba2 = SDL_ConvertSurface(surf2, SDL_PIXELFORMAT_RGBA32);
     SDL_DestroySurface(surf);
+    SDL_DestroySurface(surf2);
 
     SDL_GPUSamplerCreateInfo sampler_info{};
     sampler_info.min_filter = SDL_GPU_FILTER_LINEAR;
@@ -190,6 +197,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     buffer_test = new VertexBuffer(device, cube_vertices_indexed);
     index_test = new IndexBuffer(device, cube_indices);
     texture_test = new TextureBuffer(device, rgba);
+    texture_test2 = new TextureBuffer(device, rgba2);
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
@@ -197,6 +205,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     buffer_test->upload(copy_pass);
     index_test->upload(copy_pass);
     texture_test->upload(copy_pass);
+    texture_test2->upload(copy_pass);
 
     SDL_EndGPUCopyPass(copy_pass);
 
@@ -204,6 +213,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_WaitForGPUIdle(device);
 
     SDL_DestroySurface(rgba);
+    SDL_DestroySurface(rgba2);
 
     shader_test = new Shader(device, "shaders/vertex.spv", "shaders/frag.spv",
             0,2,0,0,
@@ -307,9 +317,8 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     uniform_test.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
     uniform_test.view = camera->update();
     uniform_test.push(command_buffer);
-    static float extra = 0.1f;
+    static float extra = 0.0f;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
-    //SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
 
     // NOTE: Buffers only show up in frames (renderdoc) if they're bound
 
@@ -330,7 +339,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_GPURenderPass* polygon_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
     SDL_BindGPUGraphicsPipeline(polygon_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*polygon_pipeline_test));
     SDL_SetGPUViewport(polygon_render_pass, &viewport);
-    texture_test->bind(render_pass, sampler);
+    texture_test2->bind(render_pass, sampler);
 
     uniform_test.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0,0));
     uniform_test.model = glm::rotate(uniform_test.model, glm::radians(rot), glm::vec3(1.0f,0,0));
@@ -339,7 +348,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     uniform_test.push(command_buffer);
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
 
-    texture_test->bind(render_pass, sampler);
+    texture_test2->bind(render_pass, sampler);
 
     buffer_test->bind(polygon_render_pass);
     index_test->bind(polygon_render_pass);
