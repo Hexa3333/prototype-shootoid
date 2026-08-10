@@ -101,6 +101,7 @@ private:
     std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter> transfer_buffer;
 };
 
+// TODO, for example: How to depth texture?
 class TextureBuffer {
 public:
     TextureBuffer(SDL_GPUDevice* device, SDL_Surface* surface);
@@ -122,5 +123,6 @@ private:
     Uint32 size;
     std::unique_ptr<SDL_GPUTexture, TextureBufferDeleter> texture;
     std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter> transfer_buffer;
+    // WARN (TODO): Surface needs to be handled differently, vulnerable to be stale.
     SDL_Surface* surface;
 };

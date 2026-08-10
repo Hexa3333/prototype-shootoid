@@ -173,7 +173,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
     }
-    SDL_Surface* rgba = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA8888);
+    SDL_Surface* rgba = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA32);
     SDL_DestroySurface(surf);
 
     SDL_GPUSamplerCreateInfo sampler_info{};
@@ -234,7 +234,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     SDL_GPUTextureCreateInfo depth_texture_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
-        .format = SDL_GPU_TEXTUREFORMAT_D16_UNORM,
+        .format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
         .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
         .width = 720,
         .height = 480,
@@ -373,7 +373,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
         SDL_GPUTextureCreateInfo depth_texture_info = {
             .type = SDL_GPU_TEXTURETYPE_2D,
-            .format = SDL_GPU_TEXTUREFORMAT_D16_UNORM,
+            .format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
             .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
             .width = (Uint32)event->window.data1,
             .height = (Uint32)event->window.data2,
@@ -424,6 +424,7 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     SDL_ReleaseGPUTexture(device, depth_texture);
     delete pipeline_test;
     delete polygon_pipeline_test;
+    delete texture_test;
     SDL_DestroyGPUDevice(device);
     SDL_DestroyWindow(window);
 }
