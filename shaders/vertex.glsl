@@ -11,9 +11,12 @@ layout (binding = 0, set = 1) uniform Uniform {
     mat4 projection;
 } uni;
 
+layout (binding = 1, set = 1) uniform Test {
+    float extra;
+} test;
 
 void main()
 {
-    gl_Position = uni.projection * uni.view * uni.model * vec4(a_position, 1.0);
+    gl_Position = uni.projection * uni.view * uni.model * vec4(a_position + test.extra, 1.0);
     v_uv = a_uv;
 }

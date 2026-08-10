@@ -72,8 +72,7 @@ Shader::~Shader() {
     SDL_ReleaseGPUShader(device, fragment_shader);
 }
 
-// WARN (TODO): Does this work?
 void UniformMVP::push(SDL_GPUCommandBuffer* command_buffer) {
-    // slot 0 (binding=0) (?)
+    // slot 0 means binding=0
     SDL_PushGPUVertexUniformData(command_buffer, 0, this, sizeof(*this));
 }

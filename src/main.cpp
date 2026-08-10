@@ -206,7 +206,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_DestroySurface(rgba);
 
     shader_test = new Shader(device, "shaders/vertex.spv", "shaders/frag.spv",
-            0,1,0,0,
+            0,2,0,0,
             1,0,0,0);
 
     std::vector<SDL_GPUColorTargetDescription> color_target_desc;
@@ -307,6 +307,8 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     uniform_test.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
     uniform_test.view = camera->update();
     uniform_test.push(command_buffer);
+    static float extra = 0.1f;
+    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
     //SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
 
     // NOTE: Buffers only show up in frames (renderdoc) if they're bound
@@ -319,6 +321,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     uniform_test.model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 1.5f, 0));
     uniform_test.model = glm::rotate(uniform_test.model, glm::radians(-rot), glm::vec3(1.0f,0,0));
     uniform_test.push(command_buffer);
+    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
     index_test->draw(render_pass);
 
     SDL_EndGPURenderPass(render_pass);
@@ -334,6 +337,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     uniform_test.view = camera->update();
     uniform_test.push(command_buffer);
+    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
 
     texture_test->bind(render_pass, sampler);
 
