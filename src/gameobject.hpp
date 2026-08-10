@@ -8,6 +8,7 @@
 
 class GameObject {
 public:
+    GameObject() = default;
     GameObject(std::shared_ptr<VertexBuffer> vbuffer,
                std::shared_ptr<IndexBuffer> ibuffer,
                std::shared_ptr<TextureBuffer> tbuffer,
