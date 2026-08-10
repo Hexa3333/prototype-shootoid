@@ -135,14 +135,13 @@ std::vector<Uint32> cube_indices = {
 
 VertexBuffer* buffer_test;
 IndexBuffer* index_test;
+TextureBuffer* texture_test;
 Shader* shader_test;
 Camera* camera;
 Pipeline* pipeline_test, *polygon_pipeline_test;
 
-SDL_GPUBuffer* index_buffer;
-SDL_GPUTexture* texture;
-SDL_GPUSampler* sampler;
 SDL_GPUTexture* depth_texture;
+SDL_GPUSampler* sampler;
 
 struct Uniform {
     glm::mat4 model;
@@ -177,29 +176,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_Surface* rgba = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA8888);
     SDL_DestroySurface(surf);
 
-    SDL_GPUTextureCreateInfo texture_info{};
-    texture_info.type = SDL_GPU_TEXTURETYPE_2D;
-    texture_info.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-    texture_info.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-    texture_info.width = rgba->w;
-    texture_info.height = rgba->h;
-    texture_info.layer_count_or_depth = 1;
-    texture_info.num_levels = 1;
-    texture_info.sample_count = SDL_GPU_SAMPLECOUNT_1;
-    texture_info.props = 0;
-
-    texture = SDL_CreateGPUTexture(device, &texture_info);
-    SDL_SetGPUTextureName(device, texture, "Albedo");
-
-    SDL_GPUTransferBufferCreateInfo texture_transfer_buffer_info{};
-    texture_transfer_buffer_info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    texture_transfer_buffer_info.size = rgba->pitch * rgba->h;
-
-    SDL_GPUTransferBuffer* texture_transfer_buffer = SDL_CreateGPUTransferBuffer(device, &texture_transfer_buffer_info);
-    void* ptr = SDL_MapGPUTransferBuffer(device, texture_transfer_buffer, false);
-    SDL_memcpy(ptr, rgba->pixels, rgba->pitch * rgba->h);
-    SDL_UnmapGPUTransferBuffer(device, texture_transfer_buffer);
-
     SDL_GPUSamplerCreateInfo sampler_info{};
     sampler_info.min_filter = SDL_GPU_FILTER_LINEAR;
     sampler_info.mag_filter = SDL_GPU_FILTER_LINEAR;
@@ -218,38 +194,20 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     buffer_test = new VertexBuffer(device, cube_vertices_indexed);
     index_test = new IndexBuffer(device, cube_indices);
+    texture_test = new TextureBuffer(device, rgba);
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
 
-    // Texture transfer - (PROBLEM HERE?)
-    SDL_GPUTextureTransferInfo texture_ti{};
-    texture_ti.transfer_buffer = texture_transfer_buffer;
-    texture_ti.offset = 0;
-    texture_ti.pixels_per_row = 0;
-    texture_ti.rows_per_layer = 0;
-
-    SDL_GPUTextureRegion texture_region{};
-    texture_region.texture = texture;
-    texture_region.mip_level = 0;
-    texture_region.layer = 0;
-    texture_region.x = 0;
-    texture_region.y = 0;
-    texture_region.z = 0;
-    texture_region.w = rgba->w;
-    texture_region.h = rgba->h;
-    texture_region.d = 1;
-
     buffer_test->upload(copy_pass);
     index_test->upload(copy_pass);
-    SDL_UploadToGPUTexture(copy_pass, &texture_ti, &texture_region, false);
+    texture_test->upload(copy_pass);
 
     SDL_EndGPUCopyPass(copy_pass);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
     SDL_WaitForGPUIdle(device);
 
-    SDL_ReleaseGPUTransferBuffer(device, texture_transfer_buffer);
     SDL_DestroySurface(rgba);
 
     shader_test = new Shader(device, "shaders/vertex.spv", "shaders/frag.spv",
@@ -348,11 +306,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     };
     SDL_SetGPUViewport(render_pass, &viewport);
 
-    SDL_GPUTextureSamplerBinding tex_binding = {
-        .texture = texture,
-        .sampler = sampler
-    };
-    SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
+    texture_test->bind(render_pass, sampler);
 
     static float rot = 0.0f;
     uniform.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
@@ -378,7 +332,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_GPURenderPass* polygon_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
     SDL_BindGPUGraphicsPipeline(polygon_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*polygon_pipeline_test));
     SDL_SetGPUViewport(polygon_render_pass, &viewport);
-    SDL_BindGPUFragmentSamplers(polygon_render_pass, 0, &tex_binding, 1);
+    texture_test->bind(render_pass, sampler);
 
     uniform.model = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0,0));
     uniform.model = glm::rotate(uniform.model, glm::radians(rot), glm::vec3(1.0f,0,0));
@@ -386,7 +340,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     uniform.view = camera->update();
     SDL_PushGPUVertexUniformData(command_buffer, 0, &uniform, sizeof(Uniform));
 
-    SDL_BindGPUFragmentSamplers(render_pass, 0, &tex_binding, 1);
+    texture_test->bind(render_pass, sampler);
 
     buffer_test->bind(polygon_render_pass);
     index_test->bind(polygon_render_pass);
@@ -468,7 +422,6 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     SDL_WaitForGPUIdle(device);
 
     SDL_ReleaseGPUTexture(device, depth_texture);
-    SDL_ReleaseGPUBuffer(device, index_buffer);
     delete pipeline_test;
     delete polygon_pipeline_test;
     SDL_DestroyGPUDevice(device);

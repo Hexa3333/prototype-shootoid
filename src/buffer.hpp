@@ -106,7 +106,7 @@ public:
     TextureBuffer(SDL_GPUDevice* device, SDL_Surface* surface);
 
     void upload(SDL_GPUCopyPass* copy_pass);
-    void bind(SDL_GPURenderPass* render_pass);
+    void bind(SDL_GPURenderPass* render_pass, SDL_GPUSampler * sampler);
 private:
     void create_texture_buffer();
     void create_upload_transfer_buffer();

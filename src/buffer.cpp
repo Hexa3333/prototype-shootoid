@@ -198,10 +198,10 @@ void TextureBuffer::upload(SDL_GPUCopyPass* copy_pass) {
     SDL_UploadToGPUTexture(copy_pass, &source, &destination, false);
 }
 
-void TextureBuffer::bind(SDL_GPURenderPass* render_pass) {
+void TextureBuffer::bind(SDL_GPURenderPass* render_pass, SDL_GPUSampler* sampler) {
     SDL_GPUTextureSamplerBinding binding;
     binding.texture = texture.get();
-    //binding.sampler = sampler.get();
+    binding.sampler = sampler;
     SDL_BindGPUFragmentSamplers(render_pass, 0, &binding, 1);
 }
 
@@ -251,12 +251,12 @@ SDL_GPUTextureRegion TextureBuffer::get_region() const {
     region.z = 0;
     region.w = surface->w;
     region.h = surface->h;
-    region.d = 0;
+    region.d = 1;
     return region;
 }
 
 void TextureBuffer::stage_for_upload() {
     void* ptr = SDL_MapGPUTransferBuffer(device, transfer_buffer.get(), false);
-    SDL_memcpy(ptr, surface->pixels, surface->pitch);
+    SDL_memcpy(ptr, surface->pixels, surface->pitch * surface->h);
     SDL_UnmapGPUTransferBuffer(device, transfer_buffer.get());
 }
