@@ -168,7 +168,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Has spirv: " << has_spirv << "\n"
               << "2D RGB unorm support: " << texture_format_supported << "\n";
 
-    SDL_Surface* surf = SDL_LoadPNG("assets/elf.png");
+    SDL_Surface* surf = SDL_LoadPNG("assets/rei.png");
     if (!surf) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
@@ -366,17 +366,20 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     }
 
     if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+        Uint32 width =  (Uint32)event->window.data1;
+        Uint32 height = (Uint32)event->window.data2;
+
         SDL_WaitForGPUIdle(device);
         SDL_ReleaseGPUTexture(device, depth_texture);
 
-        std::cout << "Size changed: (" << event->window.data1 << ", " << event->window.data2 << ")\n";
+        uniform.projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
 
         SDL_GPUTextureCreateInfo depth_texture_info = {
             .type = SDL_GPU_TEXTURETYPE_2D,
             .format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
             .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
-            .width = (Uint32)event->window.data1,
-            .height = (Uint32)event->window.data2,
+            .width = width,
+            .height = height,
             .layer_count_or_depth = 1,
             .num_levels = 1,
             .sample_count = SDL_GPU_SAMPLECOUNT_1,
