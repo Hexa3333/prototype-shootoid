@@ -2,6 +2,7 @@
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_surface.h>
+#include <cstdio>
 #include <cstring>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -25,6 +26,7 @@
 #include "camera.hpp"
 #include "pipeline.hpp"
 #include "gameobject.hpp"
+#include "time.hpp"
 
 constexpr bool _DEBUG = true;
 constexpr float NUMBER_PI = 3.14159f;
@@ -148,17 +150,44 @@ std::vector<float> quad_vertices_noindex = {
 };
 
 std::vector<float> quad_instance_positions = {
-    -5.1f, 0.0f, 0.0f,
-    -4.1f, 0.0f, 0.0f,
-    -3.1f, 0.0f, 0.0f,
-    -2.1f, 0.0f, 0.0f,
-    -1.1f, 0.0f, 0.0f,
-     0.0f, 0.0f, 0.0f,
-     1.1f, 0.0f, 0.0f,
-     2.1f, 0.0f, 0.0f,
-     3.1f, 0.0f, 0.0f,
-     4.1f, 0.0f, 0.0f,
-     5.1f, 0.0f, 0.0f,
+    // row -1
+    -5.0f,  -1.0f, 0.0f,
+    -4.0f,  -1.0f, 0.0f,
+    -3.0f,  -1.0f, 0.0f,
+    -2.0f,  -1.0f, 0.0f,
+    -1.0f,  -1.0f, 0.0f,
+     0.0f,  -1.0f, 0.0f,
+     1.0f,  -1.0f, 0.0f,
+     2.0f,  -1.0f, 0.0f,
+     3.0f,  -1.0f, 0.0f,
+     4.0f,  -1.0f, 0.0f,
+     5.0f,  -1.0f, 0.0f,
+
+     // row 0
+    -5.0f,  0.0f, 0.0f,
+    -4.0f,  0.0f, 0.0f,
+    -3.0f,  0.0f, 0.0f,
+    -2.0f,  0.0f, 0.0f,
+    -1.0f,  0.0f, 0.0f,
+     0.0f,  0.0f, 0.0f,
+     1.0f,  0.0f, 0.0f,
+     2.0f,  0.0f, 0.0f,
+     3.0f,  0.0f, 0.0f,
+     4.0f,  0.0f, 0.0f,
+     5.0f,  0.0f, 0.0f,
+
+     // row 1
+    -5.0f,  1.0f, 0.0f,
+    -4.0f,  1.0f, 0.0f,
+    -3.0f,  1.0f, 0.0f,
+    -2.0f,  1.0f, 0.0f,
+    -1.0f,  1.0f, 0.0f,
+     0.0f,  1.0f, 0.0f,
+     1.0f,  1.0f, 0.0f,
+     2.0f,  1.0f, 0.0f,
+     3.0f,  1.0f, 0.0f,
+     4.0f,  1.0f, 0.0f,
+     5.0f,  1.0f, 0.0f,
 };
 
 VertexBuffer* buffer_test;
@@ -211,8 +240,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
     }
-    SDL_Surface* rgba = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA32);
-    SDL_Surface* rgba2 = SDL_ConvertSurface(surf2, SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* rgba2 = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* rgba = SDL_ConvertSurface(surf2, SDL_PIXELFORMAT_RGBA32);
     SDL_DestroySurface(surf);
     SDL_DestroySurface(surf2);
 
@@ -313,13 +342,14 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     camera = new Camera();
 
     uniform_test.projection = glm::mat4(1.0f);
-    uniform_test.projection = glm::perspective(glm::radians(45.0f), 720.0f / 480.0f, 0.1f, 100.0f);
-
+    uniform_test.projection = glm::perspective(glm::radians(45.0f), (float)window_width / (float)window_height, 0.1f, 100.0f);
 
     return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
+    DeltaTime::instance().update();
+    printf("%f\n", DeltaTime::instance().get());
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
 
