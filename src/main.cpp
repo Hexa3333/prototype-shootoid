@@ -177,7 +177,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Has spirv: " << has_spirv << "\n"
               << "2D RGB unorm support: " << texture_format_supported << "\n";
 
-    SDL_Surface* surf = SDL_LoadPNG("assets/elf.png");
+    SDL_Surface* surf = SDL_LoadPNG("assets/background.png");
     if (!surf) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
@@ -409,10 +409,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
     if (event->type == SDL_EVENT_KEY_DOWN) {
         if (event->key.key == SDLK_W) {
-            glm::vec3 new_pos = camera->get_position() + glm::vec3(0, 0, 1.0f);
+            glm::vec3 new_pos = camera->get_position() + glm::vec3(0, 1.0f, 0);
             camera->set_position(new_pos);
         } else if (event->key.key == SDLK_S) {
-            glm::vec3 new_pos = camera->get_position() - glm::vec3(0, 0, 1.0f);
+            glm::vec3 new_pos = camera->get_position() - glm::vec3(0, 1.0f, 0);
             camera->set_position(new_pos);
         }
 
@@ -423,13 +423,20 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
             glm::vec3 new_pos = camera->get_position() + glm::vec3(1.0f, 0, 0);
             camera->set_position(new_pos);
         }
+    }
 
+    if (event->type == SDL_EVENT_MOUSE_WHEEL) {
+        float scroll = event->wheel.y;
+        glm::vec3 camera_position = camera->get_position();
 
-        if (event->key.key == SDLK_UP) {
-            glm::vec3 new_pos = camera->get_position() + glm::vec3(0, 1.0f, 0);
-            camera->set_position(new_pos);
-        } else if (event->key.key == SDLK_DOWN) {
-            glm::vec3 new_pos = camera->get_position() - glm::vec3(0, 1.0f, 0);
+        if (camera_position.z <= -3.0f) {
+            glm::vec3 new_pos;
+            if (camera_position.z + scroll > -3.0f) {
+                new_pos = glm::vec3(camera_position.x, camera_position.y, -3.0f);
+            }
+            else {
+                new_pos = camera->get_position() + glm::vec3(0, 0, scroll);
+            }
             camera->set_position(new_pos);
         }
     }
