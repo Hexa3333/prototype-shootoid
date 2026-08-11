@@ -156,7 +156,9 @@ void VertexBufferInstanced::bind(SDL_GPURenderPass* render_pass) {
 }
 
 void VertexBufferInstanced::draw(SDL_GPURenderPass* render_pass) {
-    SDL_DrawGPUPrimitives(render_pass, 6, 3, 0, 0);
+    Uint32 num_instances = instance_size / instance_pitch;
+
+    SDL_DrawGPUPrimitives(render_pass, 6, num_instances, 0, 0);
 }
 
 void VertexBufferInstanced::create_instance_buffer() {

@@ -148,10 +148,17 @@ std::vector<float> quad_vertices_noindex = {
 };
 
 std::vector<float> quad_instance_positions = {
-    0.0f, 0.0f, 0.0f,
-    2.0f, 0.0f, 0.0f,
-    0.0f, 2.0f, 0.0f,
-    // ... one entry per instance
+    -5.1f, 0.0f, 0.0f,
+    -4.1f, 0.0f, 0.0f,
+    -3.1f, 0.0f, 0.0f,
+    -2.1f, 0.0f, 0.0f,
+    -1.1f, 0.0f, 0.0f,
+     0.0f, 0.0f, 0.0f,
+     1.1f, 0.0f, 0.0f,
+     2.1f, 0.0f, 0.0f,
+     3.1f, 0.0f, 0.0f,
+     4.1f, 0.0f, 0.0f,
+     5.1f, 0.0f, 0.0f,
 };
 
 VertexBuffer* buffer_test;
@@ -359,29 +366,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     static float extra = 0.0f;
     static float rot = 0.0f;
-    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
-    SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline_test));
-    // NOTE: Buffers only show up in frames (renderdoc) if they're bound
-
-    SDL_SetGPUViewport(render_pass, &viewport);
-
-    texture_test->bind(render_pass, sampler);
-
-    uniform_test.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
-    uniform_test.view = camera->update();
-    uniform_test.push(command_buffer);
-    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
-
-    buffer_test->bind(render_pass);
-    index_test->bind(render_pass);
-
-    index_test->draw(render_pass);
-
-    SDL_EndGPURenderPass(render_pass);
-
     // IDEA (TODO) for debug: Draw polygonized version to an image?
 
-    SDL_GPURenderPass* instanced_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
+    SDL_GPURenderPass* instanced_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
     SDL_BindGPUGraphicsPipeline(instanced_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*instanced_pipeline_test));
     SDL_SetGPUViewport(instanced_render_pass, &viewport);
 
