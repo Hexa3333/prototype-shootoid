@@ -257,7 +257,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             0,2,0,0,
             1,0,0,0);
 
-    shader_instanced_test = new Shader(device, "build/shaders/instanced_vertex.spv", "build/shaders/frag.spv",
+    shader_instanced_test = new Shader(device, "build/shaders/instanced_vertex.spv", "build/shaders/instanced_frag.spv",
             0,2,0,0,
             1,0,0,0);
 
