@@ -2,7 +2,6 @@
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_surface.h>
-#include <cmath>
 #include <cstring>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -138,13 +137,31 @@ std::vector<Uint32> cube_indices = {
     20, 21, 22, 22, 23, 20,  // Bottom
 };
 
+std::vector<float> quad_vertices_noindex = {
+    -0.5f,  -0.5f,  0.0f,   0.0f, 1.0f, // bottom-left
+     0.5f,  -0.5f,  0.0f,   1.0f, 1.0f, // bottom-right
+     0.5f,   0.5f,  0.0f,   1.0f, 0.0f, // top-right
+    // Triangle 2
+    -0.5f,  -0.5f,  0.0f,   0.0f, 1.0f, // bottom-left
+     0.5f,   0.5f,  0.0f,   1.0f, 0.0f, // top-right
+    -0.5f,   0.5f,  0.0f,   0.0f, 0.0f, // top-left
+};
+
+std::vector<float> quad_instance_positions = {
+    0.0f, 0.0f, 0.0f,
+    2.0f, 0.0f, 0.0f,
+    0.0f, 2.0f, 0.0f,
+    // ... one entry per instance
+};
+
 VertexBuffer* buffer_test;
+VertexBufferInstanced* buffer_instanced_test;
 IndexBuffer* index_test;
 TextureBuffer* texture_test;
 UniformMVP uniform_test;
-Shader* shader_test;
+Shader* shader_test, *shader_instanced_test;
 Camera* camera;
-Pipeline* pipeline_test, *polygon_pipeline_test;
+Pipeline* pipeline_test, *polygon_pipeline_test, *instanced_pipeline_test;
 // Viewport-aligned x and y coordinates
 float mouse_x, mouse_y;
 Uint32 window_width, window_height;
@@ -209,6 +226,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     sampler = SDL_CreateGPUSampler(device, &sampler_info);
 
     buffer_test = new VertexBuffer(device, cube_vertices_indexed);
+    buffer_instanced_test = new VertexBufferInstanced(device, quad_vertices_noindex, quad_instance_positions);
     index_test = new IndexBuffer(device, cube_indices);
     texture_test = new TextureBuffer(device, rgba2);
     std::shared_ptr<VertexBuffer> shared_buffer_test(new VertexBuffer(device, cube_vertices_indexed));
@@ -219,6 +237,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
 
     buffer_test->upload(copy_pass);
+    buffer_instanced_test->upload(copy_pass);
     index_test->upload(copy_pass);
     texture_test->upload(copy_pass);
 
@@ -238,6 +257,10 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             0,2,0,0,
             1,0,0,0);
 
+    shader_instanced_test = new Shader(device, "build/shaders/instanced_vertex.spv", "build/shaders/frag.spv",
+            0,2,0,0,
+            1,0,0,0);
+
     std::vector<SDL_GPUColorTargetDescription> color_target_desc;
     color_target_desc.push_back({
             .format = SDL_GetGPUSwapchainTextureFormat(device, window),
@@ -254,6 +277,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             });
 
     pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0]);
+    instanced_pipeline_test = new Pipeline(device, buffer_instanced_test, shader_instanced_test, &color_target_desc[0]);
     polygon_pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0], SDL_GPU_FILLMODE_LINE);
 
     std::shared_ptr<Pipeline> shared_pipeline(new Pipeline(device, shared_buffer_test.get(), shader_test, &color_target_desc[0]));
@@ -328,25 +352,24 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     // DRAFT: Initial render pass might set things such as the background up,
     // and the following passes do other things.
 
-
-
-    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
-    SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline_test));
-    // NOTE: Buffers only show up in frames (renderdoc) if they're bound
-
     SDL_GPUViewport viewport = {
         .x = 0, .y = 0, .w = (float)width, .h = (float)height,
         .min_depth = 0.0f, .max_depth = 1.0f
     };
+
+    static float extra = 0.0f;
+    static float rot = 0.0f;
+    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
+    SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline_test));
+    // NOTE: Buffers only show up in frames (renderdoc) if they're bound
+
     SDL_SetGPUViewport(render_pass, &viewport);
 
     texture_test->bind(render_pass, sampler);
 
-    static float rot = 0.0f;
     uniform_test.model = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(1.0f,0,0));
     uniform_test.view = camera->update();
     uniform_test.push(command_buffer);
-    static float extra = 0.0f;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
 
     buffer_test->bind(render_pass);
@@ -357,6 +380,22 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_EndGPURenderPass(render_pass);
 
     // IDEA (TODO) for debug: Draw polygonized version to an image?
+
+    SDL_GPURenderPass* instanced_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
+    SDL_BindGPUGraphicsPipeline(instanced_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*instanced_pipeline_test));
+    SDL_SetGPUViewport(instanced_render_pass, &viewport);
+
+    texture_test->bind(instanced_render_pass, sampler);
+
+    uniform_test.model = glm::mat4(1.0f);
+    uniform_test.view = camera->update();
+    uniform_test.push(command_buffer);
+    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
+
+    buffer_instanced_test->bind(instanced_render_pass);
+    buffer_instanced_test->draw(instanced_render_pass);
+
+    SDL_EndGPURenderPass(instanced_render_pass);
 
     SDL_GPURenderPass* gameobject_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
     float distance_from_gameobject_x = mouse_x - 0.5f; // mouse_x - gameobject_x (NDC)

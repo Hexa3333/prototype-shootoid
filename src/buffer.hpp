@@ -45,27 +45,28 @@ struct TextureBufferDeleter {
 // TODO: Derived classes(?) for other stuff
 class VertexBuffer {
 public:
+    VertexBuffer() = default;
     VertexBuffer(SDL_GPUDevice* device, const std::vector<float>& data);
-    void upload(SDL_GPUCopyPass* copy_pass);
-    void bind(SDL_GPURenderPass* render_pass);
+    virtual void upload(SDL_GPUCopyPass* copy_pass);
+    virtual void bind(SDL_GPURenderPass* render_pass);
     
     const std::vector<SDL_GPUVertexBufferDescription>& get_vertex_buffer_descriptions() const;
     const std::vector<SDL_GPUVertexAttribute>& get_vertex_attributes() const;
 
-    void draw(SDL_GPURenderPass* render_pass);
-private:
+    virtual void draw(SDL_GPURenderPass* render_pass);
+protected:
     // TODO: Name your buffers
     void create_vertex_buffer();
     void create_upload_transfer_buffer();
-    void create_vertex_buffer_descriptions();
-    void create_vertex_buffer_attributes();
+    virtual void create_vertex_buffer_descriptions();
+    virtual void create_vertex_buffer_attributes();
     SDL_GPUTransferBufferLocation get_location() const;
     SDL_GPUBufferRegion get_region() const;
 
     // Only uploads in a copy pass
     void stage_for_upload(const std::vector<float>& data);
 
-private:
+protected:
     SDL_GPUDevice* device;
     Uint32 size;
     Uint32 pitch;
@@ -76,6 +77,31 @@ private:
     std::vector<SDL_GPUVertexAttribute> vertex_attributes;
 };
 
+class VertexBufferInstanced : public VertexBuffer {
+public:
+    VertexBufferInstanced(SDL_GPUDevice* device, const std::vector<float>& data, const std::vector<float>& instance_data);
+    void upload(SDL_GPUCopyPass* copy_pass) override;
+    void bind(SDL_GPURenderPass* render_pass) override;
+
+    void draw(SDL_GPURenderPass* render_pass) override;
+private:
+    void create_instance_buffer();
+    void create_instance_upload_transfer_buffer();
+
+    void create_vertex_buffer_descriptions() override;
+    void create_vertex_buffer_attributes() override;
+    SDL_GPUTransferBufferLocation get_instance_location() const;
+    SDL_GPUBufferRegion get_instance_region() const;
+
+    void stage_for_upload(const std::vector<float>& data, const std::vector<float>& instance_data);
+
+private:
+    Uint32 instance_size;
+    Uint32 instance_pitch;
+
+    std::unique_ptr<SDL_GPUBuffer, BufferDeleter> instance_buffer;
+    std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter> instance_transfer_buffer;
+};
 
 class IndexBuffer {
 public:

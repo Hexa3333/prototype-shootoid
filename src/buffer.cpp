@@ -1,6 +1,7 @@
 #include "buffer.hpp"
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_stdinc.h>
+#include <glm/ext/vector_float3.hpp>
 #include <memory>
 
 // Vertex Buffer
@@ -112,6 +113,135 @@ void VertexBuffer::stage_for_upload(const std::vector<float>& data) {
     SDL_UnmapGPUTransferBuffer(device, transfer_buffer.get());
 }
 
+VertexBufferInstanced::VertexBufferInstanced(SDL_GPUDevice* _device, const std::vector<float>& _data, const std::vector<float>& instance_data) 
+{
+    this->device = _device;
+    size = _data.size() * sizeof(float);
+    instance_size = instance_data.size() * sizeof(float);
+
+    create_vertex_buffer();
+    create_upload_transfer_buffer();
+
+    create_instance_buffer();
+    create_instance_upload_transfer_buffer();
+
+    stage_for_upload(_data, instance_data);
+
+    create_vertex_buffer_attributes();
+    create_vertex_buffer_descriptions();
+}
+void VertexBufferInstanced::upload(SDL_GPUCopyPass* copy_pass) {
+    auto vlocation = get_location();
+    auto vregion = get_region();
+    SDL_UploadToGPUBuffer(copy_pass, &vlocation, &vregion, false);
+
+
+    auto ilocation = get_instance_location();
+    auto iregion = get_instance_region();
+    SDL_UploadToGPUBuffer(copy_pass, &ilocation, &iregion, false);
+}
+
+void VertexBufferInstanced::bind(SDL_GPURenderPass* render_pass) {
+    SDL_GPUBufferBinding buffer_binding[] = {
+        {
+            .buffer = buffer.get(),
+            .offset = 0
+        },
+        {
+            .buffer = instance_buffer.get(),
+            .offset = 0
+        }
+    };
+    SDL_BindGPUVertexBuffers(render_pass, 0, buffer_binding, 2);
+}
+
+void VertexBufferInstanced::draw(SDL_GPURenderPass* render_pass) {
+    SDL_DrawGPUPrimitives(render_pass, 6, 3, 0, 0);
+}
+
+void VertexBufferInstanced::create_instance_buffer() {
+    SDL_GPUBufferCreateInfo info;
+    info.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+    info.size = instance_size;
+    info.props = 0;
+
+    instance_buffer = std::unique_ptr<SDL_GPUBuffer, BufferDeleter>(SDL_CreateGPUBuffer(device, &info), BufferDeleter{device});
+    SDL_SetGPUBufferName(device, instance_buffer.get(), "IB created in class");
+}
+
+void VertexBufferInstanced::create_instance_upload_transfer_buffer() {
+    SDL_GPUTransferBufferCreateInfo info;
+    info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    info.size = instance_size;
+    info.props = 0;
+    
+    instance_transfer_buffer = std::unique_ptr<SDL_GPUTransferBuffer, TransferBufferDeleter>(SDL_CreateGPUTransferBuffer(device, &info), TransferBufferDeleter{device});
+}
+
+void VertexBufferInstanced::create_vertex_buffer_descriptions() {
+    SDL_GPUVertexBufferDescription description1;
+    description1.slot = 0;
+    description1.pitch = (pitch = 5 * sizeof(float));
+    description1.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+    description1.instance_step_rate = 0;
+
+    SDL_GPUVertexBufferDescription description2;
+    description2.slot = 1;
+    description2.pitch = (instance_pitch = 3 * sizeof(float));
+    description2.input_rate = SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+    description2.instance_step_rate = 0;
+
+    vertex_buffer_descriptions.push_back(description1);
+    vertex_buffer_descriptions.push_back(description2);
+}
+
+void VertexBufferInstanced::create_vertex_buffer_attributes() {
+    SDL_GPUVertexAttribute position;
+    position.location = 0;
+    position.buffer_slot = 0;
+    position.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+    position.offset = 0;
+
+    SDL_GPUVertexAttribute uv;
+    uv.location = 1;
+    uv.buffer_slot = 0;
+    uv.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+    uv.offset = 3 * sizeof(float);
+
+    SDL_GPUVertexAttribute instance;
+    instance.location = 2;
+    instance.buffer_slot = 1;
+    instance.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+    instance.offset = 0;
+
+    vertex_attributes.push_back(position);
+    vertex_attributes.push_back(uv);
+    vertex_attributes.push_back(instance);
+}
+
+SDL_GPUTransferBufferLocation VertexBufferInstanced::get_instance_location() const {
+    SDL_GPUTransferBufferLocation location;
+    location.transfer_buffer = instance_transfer_buffer.get();
+    location.offset = 0;
+    return location;
+}
+SDL_GPUBufferRegion VertexBufferInstanced::get_instance_region() const {
+    SDL_GPUBufferRegion region;
+    region.buffer = instance_buffer.get();
+    region.size = instance_size;
+    region.offset = 0;
+    return region;
+}
+
+void VertexBufferInstanced::stage_for_upload(const std::vector<float>& data, const std::vector<float>& instance_data) {
+    void* ptr = SDL_MapGPUTransferBuffer(device, transfer_buffer.get(), false);
+    SDL_memcpy(ptr, data.data(), size);
+    SDL_UnmapGPUTransferBuffer(device, transfer_buffer.get());
+
+    void* ptr2 = SDL_MapGPUTransferBuffer(device, instance_transfer_buffer.get(), false);
+    SDL_memcpy(ptr2, instance_data.data(), instance_size);
+    SDL_UnmapGPUTransferBuffer(device, instance_transfer_buffer.get());
+}
 
 
 IndexBuffer::IndexBuffer(SDL_GPUDevice* device, const std::vector<Uint32>& data) {
@@ -141,7 +271,7 @@ void IndexBuffer::bind(SDL_GPURenderPass* render_pass) {
 // May be problematic (WARN)
 void IndexBuffer::draw(SDL_GPURenderPass* render_pass) {
     Uint32 num_indices = size / sizeof(Uint32);
-    SDL_DrawGPUIndexedPrimitives(render_pass, num_indices, 1, 0, 0, 0);
+    SDL_DrawGPUIndexedPrimitives(render_pass, num_indices, 2, 0, 0, 0);
 }
 
 void IndexBuffer::create_index_buffer() {

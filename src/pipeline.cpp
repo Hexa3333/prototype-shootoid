@@ -11,7 +11,7 @@ Pipeline::Pipeline(SDL_GPUDevice* _device, VertexBuffer* buffer, Shader* shader,
     info.fragment_shader = shader->fragment_shader;
     info.vertex_input_state = {
         .vertex_buffer_descriptions = buffer->get_vertex_buffer_descriptions().data(),
-        .num_vertex_buffers = 1,
+        .num_vertex_buffers = (Uint32)buffer->get_vertex_buffer_descriptions().size(),
         .vertex_attributes = buffer->get_vertex_attributes().data(),
         .num_vertex_attributes = (Uint32)buffer->get_vertex_attributes().size()
     };
