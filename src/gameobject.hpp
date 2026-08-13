@@ -15,6 +15,7 @@ public:
                std::shared_ptr<Pipeline> _pipeline);
 
     virtual void update(glm::mat4 model);
+    virtual void update(glm::vec3 model);
     virtual void draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport);
     UniformMVP uniform_mvp;
 protected:
@@ -24,4 +25,6 @@ protected:
     std::shared_ptr<TextureBuffer> texture_buffer;
     SDL_GPUSampler* sampler; // DANGER
     std::shared_ptr<Pipeline> pipeline;
+    
+    glm::vec3 position;
 };

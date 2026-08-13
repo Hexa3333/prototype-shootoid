@@ -1,5 +1,6 @@
 #include "gameobject.hpp"
 #include <SDL3/SDL_gpu.h>
+#include <glm/ext/matrix_transform.hpp>
 
 // WARN (TODO): Is the shared_ptr logic alright?
 GameObject::GameObject(std::shared_ptr<VertexBuffer> vbuffer,
@@ -16,6 +17,12 @@ GameObject::GameObject(std::shared_ptr<VertexBuffer> vbuffer,
 
 void GameObject::update(glm::mat4 model) {
     uniform_mvp.model = model;
+    // TODO view = global camera view
+    // TODO view = global projection
+}
+
+void GameObject::update(glm::vec3 model) {
+    uniform_mvp.model = glm::translate(glm::mat4(1.0f), model);
     // TODO view = global camera view
     // TODO view = global projection
 }
