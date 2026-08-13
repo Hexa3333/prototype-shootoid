@@ -23,3 +23,8 @@ glm::vec3 Camera::get_position() {
 void Camera::set_position(glm::vec3 set) {
     position = set;
 }
+
+void Camera::track(GameObject* gameobject) {
+    glm::vec3 go_position = gameobject->get_position();
+    position = glm::vec3(go_position.x, go_position.y, position.z);
+}

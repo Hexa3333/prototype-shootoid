@@ -407,6 +407,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     static float rot = 0.0f;
     // IDEA (TODO) for debug: Draw polygonized version to an image?
 
+    camera->track(player_test);
     SDL_GPURenderPass* instanced_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
     SDL_BindGPUGraphicsPipeline(instanced_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*instanced_pipeline_test));
     SDL_SetGPUViewport(instanced_render_pass, &viewport);
@@ -424,10 +425,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_EndGPURenderPass(instanced_render_pass);
 
     SDL_GPURenderPass* gameobject_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
-    float distance_from_gameobject_x = mouse_x - 0.5f; // mouse_x - gameobject_x (NDC)
-    float distance_from_gameobject_y = mouse_y - 0.5f; // mouse_y - gameobject_y (NDC)
-    float angle = std::atan2(distance_from_gameobject_y, distance_from_gameobject_x);
-    gameobject_test->update(glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0,0,1)));
+    gameobject_test->update(glm::mat4(1.0f));
     gameobject_test->uniform_mvp.view = camera->update();
     gameobject_test->uniform_mvp.projection = uniform_test.projection;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
@@ -440,16 +438,19 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     gameobject_test2->uniform_mvp.view = camera->update();
     gameobject_test2->uniform_mvp.projection = uniform_test.projection;
-    gameobject_test2->update(glm::translate(glm::mat4(1.0f), glm::vec3(0,1,0)));
+    gameobject_test2->update(glm::vec3(0,1,0));
     gameobject_test2->draw(command_buffer, gameobject_render_pass2, &viewport);
 
     SDL_EndGPURenderPass(gameobject_render_pass2);
 
     SDL_GPURenderPass* player_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
 
+    float distance_from_gameobject_x = mouse_x - 0.5f; // mouse_x - gameobject_x (NDC)
+    float distance_from_gameobject_y = mouse_y - 0.5f; // mouse_y - gameobject_y (NDC)
+    float angle = std::atan2(distance_from_gameobject_y, distance_from_gameobject_x);
+    //player_test->update(glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0,0,1)));
     player_test->uniform_mvp.view = camera->update();
     player_test->uniform_mvp.projection = uniform_test.projection;
-    player_test->update(glm::translate(glm::mat4(1.0f), glm::vec3(0,-1,0)));
     player_test->draw(command_buffer, player_render_pass, &viewport);
 
     SDL_EndGPURenderPass(player_render_pass);
@@ -492,21 +493,20 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     }
 
     if (event->type == SDL_EVENT_KEY_DOWN) {
+        static glm::vec3 mov(0,0,0);
         if (event->key.key == SDLK_W) {
-            glm::vec3 new_pos = camera->get_position() + glm::vec3(0, 1.0f, 0);
-            camera->set_position(new_pos);
+            mov.y += 1.0f;
         } else if (event->key.key == SDLK_S) {
-            glm::vec3 new_pos = camera->get_position() - glm::vec3(0, 1.0f, 0);
-            camera->set_position(new_pos);
+            mov.y -= 1.0f;
         }
 
         if (event->key.key == SDLK_D) {
-            glm::vec3 new_pos = camera->get_position() - glm::vec3(1.0f, 0, 0);
-            camera->set_position(new_pos);
+            mov.x -= 1.0f;
         } else if (event->key.key == SDLK_A) {
-            glm::vec3 new_pos = camera->get_position() + glm::vec3(1.0f, 0, 0);
-            camera->set_position(new_pos);
+            mov.x += 1.0f;
         }
+
+        player_test->update(mov);
     }
 
     if (event->type == SDL_EVENT_MOUSE_WHEEL) {

@@ -9,6 +9,7 @@ struct Player : public GameObject {
     // DON'T FORGET
     void upload_buffers(SDL_GPUDevice* device);
     void update(glm::mat4 model) override;
+    void update(glm::vec3 _pos) override;
     void draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport) override;
 
     int max_health;

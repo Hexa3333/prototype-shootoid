@@ -21,10 +21,15 @@ void GameObject::update(glm::mat4 model) {
     // TODO view = global projection
 }
 
-void GameObject::update(glm::vec3 model) {
-    uniform_mvp.model = glm::translate(glm::mat4(1.0f), model);
+void GameObject::update(glm::vec3 _pos) {
+    position = _pos;
+    uniform_mvp.model = glm::translate(glm::mat4(1.0f), _pos);
     // TODO view = global camera view
     // TODO view = global projection
+}
+
+glm::vec3 GameObject::get_position() const {
+    return position;
 }
 
 void GameObject::draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport) {

@@ -82,8 +82,19 @@ void Player::upload_buffers(SDL_GPUDevice* device) {
 void Player::update(glm::mat4 model) {
     uniform_mvp.model = model;
 
+    // TODO view = global camera view
+    // TODO view = global projection
     // Do other things
 }
+
+void Player::update(glm::vec3 _pos) {
+    position = _pos;
+    uniform_mvp.model = glm::translate(glm::mat4(1.0f), _pos);
+    // TODO view = global camera view
+    // TODO view = global projection
+    // Do other things
+}
+
 void Player::draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport) {
     SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline.get()));
     SDL_SetGPUViewport(render_pass, viewport);
