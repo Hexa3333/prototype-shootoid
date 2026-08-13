@@ -26,6 +26,7 @@
 #include "pipeline.hpp"
 #include "gameobject.hpp"
 #include "time.hpp"
+#include "zombie.hpp"
 
 constexpr bool _DEBUG = true;
 constexpr float NUMBER_PI = 3.14159f;
@@ -207,6 +208,9 @@ SDL_GPUSampler* sampler;
 GameObject* gameobject_test, *gameobject_test2;
 Player* player_test;
 
+std::vector<Zombie> zombie_vector;
+TextureBuffer* zombie_texture;
+
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
     mouse_x = 0.0;
@@ -240,10 +244,17 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
     }
+    SDL_Surface* surf3 = SDL_LoadPNG("assets/zombie.png");
+    if (!surf3) {
+        std::cerr << "Failed to load image.\n";
+        return SDL_APP_FAILURE;
+    }
     SDL_Surface* rgba2 = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba = SDL_ConvertSurface(surf2, SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* rgba3 = SDL_ConvertSurface(surf3, SDL_PIXELFORMAT_RGBA32);
     SDL_DestroySurface(surf);
     SDL_DestroySurface(surf2);
+    SDL_DestroySurface(surf3);
 
     SDL_GPUSamplerCreateInfo sampler_info{};
     sampler_info.min_filter = SDL_GPU_FILTER_LINEAR;
@@ -269,6 +280,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::shared_ptr<IndexBuffer> shared_index_test(new IndexBuffer(device, cube_indices));
     std::shared_ptr<TextureBuffer> shared_texture_test(new TextureBuffer(device, rgba));
 
+    std::shared_ptr<TextureBuffer> zombie_texture(new TextureBuffer(device, rgba3));
+
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
 
@@ -280,6 +293,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     shared_buffer_test->upload(copy_pass);
     shared_index_test->upload(copy_pass);
     shared_texture_test->upload(copy_pass);
+
+    zombie_texture->upload(copy_pass);
 
     SDL_EndGPUCopyPass(copy_pass);
 
@@ -332,6 +347,27 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             sampler,
             shared_pipeline);
     player_test->upload_buffers(device);
+
+    zombie_vector.push_back(Zombie(device,
+            zombie_texture,
+            sampler,
+            shared_pipeline));
+    zombie_vector.push_back(Zombie(device,
+            zombie_texture,
+            sampler,
+            shared_pipeline));
+    zombie_vector.push_back(Zombie(device,
+            zombie_texture,
+            sampler,
+            shared_pipeline));
+    zombie_vector.push_back(Zombie(device,
+            zombie_texture,
+            sampler,
+            shared_pipeline));
+
+    for (auto& z : zombie_vector) {
+        z.upload_buffers(device);
+    }
 
     SDL_GPUTextureCreateInfo depth_texture_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
@@ -431,17 +467,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
     gameobject_test->draw(command_buffer, gameobject_render_pass, &viewport);
 
-
     SDL_EndGPURenderPass(gameobject_render_pass);
-
-    SDL_GPURenderPass* gameobject_render_pass2 = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
-
-    gameobject_test2->uniform_mvp.view = camera->update();
-    gameobject_test2->uniform_mvp.projection = uniform_test.projection;
-    gameobject_test2->update(glm::vec3(0,1,0));
-    gameobject_test2->draw(command_buffer, gameobject_render_pass2, &viewport);
-
-    SDL_EndGPURenderPass(gameobject_render_pass2);
 
     SDL_GPURenderPass* player_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
 
@@ -451,7 +477,22 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     SDL_EndGPURenderPass(player_render_pass);
 
+    SDL_GPURenderPass* zombie_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
+
+    float offset = 0.0f;
+    for (auto& zombie : zombie_vector) {
+        zombie.update(glm::vec3(offset, 5, 0));
+        offset += 2.0f;
+        zombie.uniform_mvp.view = camera->update();
+        zombie.uniform_mvp.projection = uniform_test.projection;
+        zombie.draw(command_buffer, zombie_render_pass, &viewport);
+    }
+
+    SDL_EndGPURenderPass(zombie_render_pass);
+
     SDL_SubmitGPUCommandBuffer(command_buffer);
+
+
 
     rot += 1.0f;
     return SDL_APP_CONTINUE;
