@@ -2,8 +2,6 @@
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_surface.h>
-#include <cstdio>
-#include <cstring>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/geometric.hpp>
@@ -36,10 +34,10 @@ SDL_GPUDevice* device;
 
 
 std::vector<float> quad_vertices = {
-     0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  // top right
-     0.5f, -0.5f,  0.0f, 1.0f, 1.0f,  // bot right
-    -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,  // bot left
-    -0.5f,  0.5f,  0.0f, 0.0f, 0.0f,  // top left
+     1.0f,  1.0f,  0.0f, 1.0f, 0.0f,  // top right
+     1.0f, -1.0f,  0.0f, 1.0f, 1.0f,  // bot right
+    -1.0f, -1.0f,  0.0f, 0.0f, 1.0f,  // bot left
+    -1.0f,  1.0f,  0.0f, 0.0f, 0.0f,  // top left
 };
 
 std::vector<Uint32> quad_indices = {
@@ -48,85 +46,85 @@ std::vector<Uint32> quad_indices = {
 };
 
 std::vector<float> cube_vertices = {
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+    -1.0f, -1.0f, -1.0f,  0.0f, 0.0f,
+     1.0f, -1.0f, -1.0f,  1.0f, 0.0f,
+     1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+     1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+    -1.0f,  1.0f, -1.0f,  0.0f, 1.0f,
+    -1.0f, -1.0f, -1.0f,  0.0f, 0.0f,
 
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
+     1.0f, -1.0f,  1.0f,  1.0f, 0.0f,
+     1.0f,  1.0f,  1.0f,  1.0f, 1.0f,
+     1.0f,  1.0f,  1.0f,  1.0f, 1.0f,
+    -1.0f,  1.0f,  1.0f,  0.0f, 1.0f,
+    -1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
 
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -1.0f,  1.0f,  1.0f,  1.0f, 0.0f,
+    -1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+    -1.0f, -1.0f, -1.0f,  0.0f, 1.0f,
+    -1.0f, -1.0f, -1.0f,  0.0f, 1.0f,
+    -1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
+    -1.0f,  1.0f,  1.0f,  1.0f, 0.0f,
 
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     1.0f,  1.0f,  1.0f,  1.0f, 0.0f,
+     1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+     1.0f, -1.0f, -1.0f,  0.0f, 1.0f,
+     1.0f, -1.0f, -1.0f,  0.0f, 1.0f,
+     1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
+     1.0f,  1.0f,  1.0f,  1.0f, 0.0f,
 
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -1.0f, -1.0f, -1.0f,  0.0f, 1.0f,
+     1.0f, -1.0f, -1.0f,  1.0f, 1.0f,
+     1.0f, -1.0f,  1.0f,  1.0f, 0.0f,
+     1.0f, -1.0f,  1.0f,  1.0f, 0.0f,
+    -1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
+    -1.0f, -1.0f, -1.0f,  0.0f, 1.0f,
 
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+    -1.0f,  1.0f, -1.0f,  0.0f, 1.0f,
+     1.0f,  1.0f, -1.0f,  1.0f, 1.0f,
+     1.0f,  1.0f,  1.0f,  1.0f, 0.0f,
+     1.0f,  1.0f,  1.0f,  1.0f, 0.0f,
+    -1.0f,  1.0f,  1.0f,  0.0f, 0.0f,
+    -1.0f,  1.0f, -1.0f,  0.0f, 1.0f
 };
 
 std::vector<float> cube_vertices_indexed = {
     // Front face (+Z)
-    -0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+    -1.0f, -1.0f,  1.0f,  0.0f, 1.0f,
+     1.0f, -1.0f,  1.0f,  1.0f, 1.0f,
+     1.0f,  1.0f,  1.0f,  1.0f, 0.0f,
+    -1.0f,  1.0f,  1.0f,  0.0f, 0.0f,
 
     // Back face (-Z)
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+     1.0f, -1.0f, -1.0f,  0.0f, 1.0f,
+    -1.0f, -1.0f, -1.0f,  1.0f, 1.0f,
+    -1.0f,  1.0f, -1.0f,  1.0f, 0.0f,
+     1.0f,  1.0f, -1.0f,  0.0f, 0.0f,
 
     // Left face (-X)
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+    -1.0f, -1.0f, -1.0f,  0.0f, 1.0f,
+    -1.0f, -1.0f,  1.0f,  1.0f, 1.0f,
+    -1.0f,  1.0f,  1.0f,  1.0f, 0.0f,
+    -1.0f,  1.0f, -1.0f,  0.0f, 0.0f,
 
     // Right face (+X)
-     0.5f, -0.5f,  0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+     1.0f, -1.0f,  1.0f,  0.0f, 1.0f,
+     1.0f, -1.0f, -1.0f,  1.0f, 1.0f,
+     1.0f,  1.0f, -1.0f,  1.0f, 0.0f,
+     1.0f,  1.0f,  1.0f,  0.0f, 0.0f,
 
     // Top face (+Y)
-    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 0.0f,
+    -1.0f,  1.0f,  1.0f,  0.0f, 1.0f,
+     1.0f,  1.0f,  1.0f,  1.0f, 1.0f,
+     1.0f,  1.0f, -1.0f,  1.0f, 0.0f,
+    -1.0f,  1.0f, -1.0f,  0.0f, 0.0f,
 
     // Bottom face (-Y)
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -1.0f, -1.0f, -1.0f,  0.0f, 1.0f,
+     1.0f, -1.0f, -1.0f,  1.0f, 1.0f,
+     1.0f, -1.0f,  1.0f,  1.0f, 0.0f,
+    -1.0f, -1.0f,  1.0f,  0.0f, 0.0f,
 
 };
 
@@ -140,13 +138,13 @@ std::vector<Uint32> cube_indices = {
 };
 
 std::vector<float> quad_vertices_noindex = {
-    -0.5f,  -0.5f,  0.0f,   0.0f, 1.0f, // bottom-left
-     0.5f,  -0.5f,  0.0f,   1.0f, 1.0f, // bottom-right
-     0.5f,   0.5f,  0.0f,   1.0f, 0.0f, // top-right
+    -1.0f,  -1.0f,  0.0f,   0.0f, 1.0f, // bottom-left
+     1.0f,  -1.0f,  0.0f,   1.0f, 1.0f, // bottom-right
+     1.0f,   1.0f,  0.0f,   1.0f, 0.0f, // top-right
     // Triangle 2
-    -0.5f,  -0.5f,  0.0f,   0.0f, 1.0f, // bottom-left
-     0.5f,   0.5f,  0.0f,   1.0f, 0.0f, // top-right
-    -0.5f,   0.5f,  0.0f,   0.0f, 0.0f, // top-left
+    -1.0f,  -1.0f,  0.0f,   0.0f, 1.0f, // bottom-left
+     1.0f,   1.0f,  0.0f,   1.0f, 0.0f, // top-right
+    -1.0f,   1.0f,  0.0f,   0.0f, 0.0f, // top-left
 };
 
 std::vector<float> quad_instance_positions = {
@@ -349,7 +347,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
     DeltaTime::instance().update();
-    printf("%f\n", DeltaTime::instance().get());
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
 
@@ -418,7 +415,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     float distance_from_gameobject_x = mouse_x - 0.5f; // mouse_x - gameobject_x (NDC)
     float distance_from_gameobject_y = mouse_y - 0.5f; // mouse_y - gameobject_y (NDC)
     float angle = std::atan2(distance_from_gameobject_y, distance_from_gameobject_x);
-    gameobject_test->uniform_mvp.model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0,0,1));
+    gameobject_test->update(glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0,0,1)));
     gameobject_test->uniform_mvp.view = camera->update();
     gameobject_test->uniform_mvp.projection = uniform_test.projection;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));

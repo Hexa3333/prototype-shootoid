@@ -14,9 +14,10 @@ public:
                SDL_GPUSampler* _sampler,
                std::shared_ptr<Pipeline> _pipeline);
 
-    void draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport);
+    virtual void update(glm::mat4 model);
+    virtual void draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport);
     UniformMVP uniform_mvp;
-private:
+protected:
     std::shared_ptr<VertexBuffer> vertex_buffer;
     std::shared_ptr<IndexBuffer> index_buffer;
     // TODO: TextureBuffer could get coupled with samplers...

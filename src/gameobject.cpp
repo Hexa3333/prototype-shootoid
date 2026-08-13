@@ -14,6 +14,12 @@ GameObject::GameObject(std::shared_ptr<VertexBuffer> vbuffer,
       pipeline(_pipeline) {
 }
 
+void GameObject::update(glm::mat4 model) {
+    uniform_mvp.model = model;
+    // TODO view = global camera view
+    // TODO view = global projection
+}
+
 void GameObject::draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport) {
     SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline.get()));
     SDL_SetGPUViewport(render_pass, viewport);
