@@ -1,3 +1,4 @@
+#include "player.hpp"
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_stdinc.h>
@@ -203,7 +204,8 @@ Uint32 window_width, window_height;
 SDL_GPUTexture* depth_texture;
 SDL_GPUSampler* sampler;
 
-GameObject* gameobject_test;
+GameObject* gameobject_test, *gameobject_test2;
+Player* player_test;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
@@ -320,6 +322,16 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             shared_texture_test,
             sampler,
             shared_pipeline);
+    gameobject_test2 = new GameObject(shared_buffer_test,
+            shared_index_test,
+            shared_texture_test,
+            sampler,
+            shared_pipeline);
+    player_test = new Player(device,
+            shared_texture_test,
+            sampler,
+            shared_pipeline);
+    player_test->upload_buffers(device);
 
     SDL_GPUTextureCreateInfo depth_texture_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
@@ -421,7 +433,26 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
     gameobject_test->draw(command_buffer, gameobject_render_pass, &viewport);
 
+
     SDL_EndGPURenderPass(gameobject_render_pass);
+
+    SDL_GPURenderPass* gameobject_render_pass2 = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
+
+    gameobject_test2->uniform_mvp.view = camera->update();
+    gameobject_test2->uniform_mvp.projection = uniform_test.projection;
+    gameobject_test2->update(glm::translate(glm::mat4(1.0f), glm::vec3(0,1,0)));
+    gameobject_test2->draw(command_buffer, gameobject_render_pass2, &viewport);
+
+    SDL_EndGPURenderPass(gameobject_render_pass2);
+
+    SDL_GPURenderPass* player_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
+
+    player_test->uniform_mvp.view = camera->update();
+    player_test->uniform_mvp.projection = uniform_test.projection;
+    player_test->update(glm::translate(glm::mat4(1.0f), glm::vec3(0,-1,0)));
+    player_test->draw(command_buffer, player_render_pass, &viewport);
+
+    SDL_EndGPURenderPass(player_render_pass);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
 
