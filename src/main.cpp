@@ -445,9 +445,6 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     SDL_GPURenderPass* player_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
 
-    float distance_from_gameobject_x = mouse_x - 0.5f; // mouse_x - gameobject_x (NDC)
-    float distance_from_gameobject_y = mouse_y - 0.5f; // mouse_y - gameobject_y (NDC)
-    float angle = std::atan2(distance_from_gameobject_y, distance_from_gameobject_x);
     player_test->uniform_mvp.view = camera->update();
     player_test->uniform_mvp.projection = uniform_test.projection;
     player_test->draw(command_buffer, player_render_pass, &viewport);
@@ -491,27 +488,19 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         return SDL_APP_CONTINUE;
     }
 
+    static glm::vec3 mov(0,0,0);
     if (event->type == SDL_EVENT_KEY_DOWN) {
-        static glm::vec3 mov(0,0,0);
-        static float rot = 0.0f;
         if (event->key.key == SDLK_W) {
             mov.y += 1.0f;
-            rot += 3.1415 * 0.1f;
         } else if (event->key.key == SDLK_S) {
             mov.y -= 1.0f;
-            rot += 3.1415 * 0.1f;
         }
 
         if (event->key.key == SDLK_D) {
             mov.x -= 1.0f;
-            rot += 3.1415 * 0.1f;
         } else if (event->key.key == SDLK_A) {
             mov.x += 1.0f;
-            rot += 3.1415 * 0.1f;
         }
-
-        player_test->update(mov);
-        player_test->update(rot);
     }
 
     if (event->type == SDL_EVENT_MOUSE_WHEEL) {
@@ -541,6 +530,11 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         mouse_y = y / window_height;
     }
 
+    player_test->update(mov);
+    float distance_from_gameobject_x = mouse_x - 0.5f; // mouse_x - gameobject_x (NDC)
+    float distance_from_gameobject_y = mouse_y - 0.5f; // mouse_y - gameobject_y (NDC)
+    float angle = std::atan2(distance_from_gameobject_y, distance_from_gameobject_x);
+    player_test->update(angle);
     return SDL_APP_CONTINUE;
 }
 
