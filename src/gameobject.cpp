@@ -24,8 +24,14 @@ void GameObject::update(glm::mat4 model) {
 void GameObject::update(glm::vec3 _pos) {
     position = _pos;
     uniform_mvp.model = glm::translate(glm::mat4(1.0f), _pos);
-    // TODO view = global camera view
-    // TODO view = global projection
+
+    update(uniform_mvp.model);
+}
+
+void GameObject::update(float angle) {
+    uniform_mvp.model = glm::rotate(uniform_mvp.model, angle, glm::vec3(0,0,1));
+
+    update(uniform_mvp.model);
 }
 
 glm::vec3 GameObject::get_position() const {

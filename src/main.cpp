@@ -448,7 +448,6 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     float distance_from_gameobject_x = mouse_x - 0.5f; // mouse_x - gameobject_x (NDC)
     float distance_from_gameobject_y = mouse_y - 0.5f; // mouse_y - gameobject_y (NDC)
     float angle = std::atan2(distance_from_gameobject_y, distance_from_gameobject_x);
-    //player_test->update(glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0,0,1)));
     player_test->uniform_mvp.view = camera->update();
     player_test->uniform_mvp.projection = uniform_test.projection;
     player_test->draw(command_buffer, player_render_pass, &viewport);
@@ -494,19 +493,25 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
     if (event->type == SDL_EVENT_KEY_DOWN) {
         static glm::vec3 mov(0,0,0);
+        static float rot = 0.0f;
         if (event->key.key == SDLK_W) {
             mov.y += 1.0f;
+            rot += 3.1415 * 0.1f;
         } else if (event->key.key == SDLK_S) {
             mov.y -= 1.0f;
+            rot += 3.1415 * 0.1f;
         }
 
         if (event->key.key == SDLK_D) {
             mov.x -= 1.0f;
+            rot += 3.1415 * 0.1f;
         } else if (event->key.key == SDLK_A) {
             mov.x += 1.0f;
+            rot += 3.1415 * 0.1f;
         }
 
         player_test->update(mov);
+        player_test->update(rot);
     }
 
     if (event->type == SDL_EVENT_MOUSE_WHEEL) {
@@ -523,6 +528,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
             }
             camera->set_position(new_pos);
         }
+
     }
 
     if (event->type == SDL_EVENT_MOUSE_MOTION) {
