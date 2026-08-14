@@ -190,6 +190,63 @@ std::vector<float> quad_instance_positions = {
      5.0f,  1.0f, 0.0f,
 };
 
+std::vector<float> mermaid_vertices = {
+        // Head (0-3)
+        -0.15f,  1.00f, 0.0f, 0.3636f, 0.0000f, // 0 H_TL
+         0.15f,  1.00f, 0.0f, 0.6364f, 0.0000f, // 1 H_TR
+        -0.15f,  0.75f, 0.0f, 0.3636f, 0.1351f, // 2 H_BL
+         0.15f,  0.75f, 0.0f, 0.6364f, 0.1351f, // 3 H_BR
+ 
+        // Torso: shoulders down to waist (4-7)
+        -0.28f,  0.75f, 0.0f, 0.2455f, 0.1351f, // 4 Tor_TL
+         0.28f,  0.75f, 0.0f, 0.7545f, 0.1351f, // 5 Tor_TR
+        -0.18f,  0.35f, 0.0f, 0.3364f, 0.3514f, // 6 Tor_BL / Hip_TL
+         0.18f,  0.35f, 0.0f, 0.6636f, 0.3514f, // 7 Tor_BR / Hip_TR
+ 
+        // Hips: waist flaring out (8-9)
+        -0.32f,  0.00f, 0.0f, 0.2091f, 0.5405f, // 8 Hip_BL / Tail_TL
+         0.32f,  0.00f, 0.0f, 0.7909f, 0.5405f, // 9 Hip_BR / Tail_TR
+ 
+        // Tail: hips down to base of fin (10-11)
+        -0.12f, -0.50f, 0.0f, 0.3909f, 0.8108f, // 10 Tail_BL / Fin_TL
+         0.12f, -0.50f, 0.0f, 0.6091f, 0.8108f, // 11 Tail_BR / Fin_TR
+ 
+        // Tail fin, forked (12-14)
+        -0.50f, -0.85f, 0.0f, 0.0455f, 1.0000f, // 12 Fin_L_tip
+         0.00f, -0.62f, 0.0f, 0.5000f, 0.8757f, // 13 Fin_notch
+         0.50f, -0.85f, 0.0f, 0.9545f, 1.0000f, // 14 Fin_R_tip
+ 
+        // Left arm (15-18)
+        -0.28f,  0.73f, 0.0f, 0.2455f, 0.1459f, // 15 shoulder outer
+        -0.22f,  0.68f, 0.0f, 0.3000f, 0.1730f, // 16 shoulder inner
+        -0.48f,  0.42f, 0.0f, 0.0636f, 0.3135f, // 17 hand inner
+        -0.55f,  0.46f, 0.0f, 0.0000f, 0.2919f, // 18 hand outer
+ 
+        // Right arm (19-22)
+         0.28f,  0.73f, 0.0f, 0.7545f, 0.1459f, // 19 shoulder outer
+         0.22f,  0.68f, 0.0f, 0.7000f, 0.1730f, // 20 shoulder inner
+         0.48f,  0.42f, 0.0f, 0.9364f, 0.3135f, // 21 hand inner
+         0.55f,  0.46f, 0.0f, 1.0000f, 0.2919f, // 22 hand outer
+
+};
+
+std::vector<Uint32> mermaid_indices = {
+        // Head
+        0, 2, 3,   0, 3, 1,
+        // Torso
+        4, 6, 7,   4, 7, 5,
+        // Hips
+        6, 8, 9,   6, 9, 7,
+        // Tail
+        8, 10, 11, 8, 11, 9,
+        // Tail fin (forked, shares top edge with tail)
+        10, 12, 13,  13, 14, 11,  10, 13, 11,
+        // Left arm
+        15, 18, 17, 15, 17, 16,
+        // Right arm
+        19, 20, 21, 19, 21, 22,
+};
+
 VertexBuffer* buffer_test;
 VertexBufferInstanced* buffer_instanced_test;
 IndexBuffer* index_test;
@@ -205,7 +262,7 @@ Uint32 window_width, window_height;
 SDL_GPUTexture* depth_texture;
 SDL_GPUSampler* sampler;
 
-GameObject* gameobject_test, *gameobject_test2;
+GameObject* gameobject_test, *gameobject_test2, *gameobject_test3;
 Player* player_test;
 
 std::vector<Zombie> zombie_vector;
@@ -249,12 +306,19 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
     }
+    SDL_Surface* surf4 = SDL_LoadPNG("assets/mermaid_texture.png");
+    if (!surf4) {
+        std::cerr << "Failed to load image.\n";
+        return SDL_APP_FAILURE;
+    }
     SDL_Surface* rgba2 = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba = SDL_ConvertSurface(surf2, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba3 = SDL_ConvertSurface(surf3, SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* rgba4 = SDL_ConvertSurface(surf4, SDL_PIXELFORMAT_RGBA32);
     SDL_DestroySurface(surf);
     SDL_DestroySurface(surf2);
     SDL_DestroySurface(surf3);
+    SDL_DestroySurface(surf4);
 
     SDL_GPUSamplerCreateInfo sampler_info{};
     sampler_info.min_filter = SDL_GPU_FILTER_LINEAR;
@@ -277,8 +341,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     index_test = new IndexBuffer(device, cube_indices);
     texture_test = new TextureBuffer(device, rgba2);
     std::shared_ptr<VertexBuffer> shared_buffer_test(new VertexBuffer(device, cube_vertices_indexed));
+    std::shared_ptr<VertexBuffer> shared_buffer_test2(new VertexBuffer(device, mermaid_vertices));
     std::shared_ptr<IndexBuffer> shared_index_test(new IndexBuffer(device, cube_indices));
+    std::shared_ptr<IndexBuffer> shared_index_test2(new IndexBuffer(device, mermaid_indices));
     std::shared_ptr<TextureBuffer> shared_texture_test(new TextureBuffer(device, rgba));
+    std::shared_ptr<TextureBuffer> shared_texture_test2(new TextureBuffer(device, rgba4));
 
     std::shared_ptr<TextureBuffer> zombie_texture(new TextureBuffer(device, rgba3));
 
@@ -291,8 +358,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     texture_test->upload(copy_pass);
 
     shared_buffer_test->upload(copy_pass);
+    shared_buffer_test2->upload(copy_pass);
     shared_index_test->upload(copy_pass);
+    shared_index_test2->upload(copy_pass);
     shared_texture_test->upload(copy_pass);
+    shared_texture_test2->upload(copy_pass);
 
     zombie_texture->upload(copy_pass);
 
@@ -340,6 +410,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     gameobject_test2 = new GameObject(shared_buffer_test,
             shared_index_test,
             shared_texture_test,
+            sampler,
+            shared_pipeline);
+    gameobject_test3 = new GameObject(shared_buffer_test2,
+            shared_index_test2,
+            shared_texture_test2,
             sampler,
             shared_pipeline);
     player_test = new Player(device,
@@ -476,6 +551,15 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     player_test->draw(command_buffer, player_render_pass, &viewport);
 
     SDL_EndGPURenderPass(player_render_pass);
+
+    SDL_GPURenderPass* mermaid_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
+    gameobject_test3->update(glm::translate(glm::mat4(1.0f), glm::vec3(5,0, -1)));
+    gameobject_test3->uniform_mvp.view = camera->update();
+    gameobject_test3->uniform_mvp.projection = uniform_test.projection;
+    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
+    gameobject_test3->draw(command_buffer, gameobject_render_pass, &viewport);
+
+    SDL_EndGPURenderPass(mermaid_render_pass);
 
     SDL_GPURenderPass* zombie_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
 
