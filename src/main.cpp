@@ -27,6 +27,7 @@
 #include "gameobject.hpp"
 #include "time.hpp"
 #include "zombie.hpp"
+#include "game.hpp"
 
 constexpr bool _DEBUG = true;
 constexpr float NUMBER_PI = 3.14159f;
@@ -268,6 +269,8 @@ Player* player_test;
 std::vector<Zombie> zombie_vector;
 TextureBuffer* zombie_texture;
 
+Game game;
+
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
     mouse_x = 0.0;
@@ -440,6 +443,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             sampler,
             shared_pipeline));
 
+    game = Game(device, window, zombie_texture, sampler, shared_pipeline);
+    game.upload_buffers();
+
     for (auto& z : zombie_vector) {
         z.upload_buffers(device);
     }
@@ -574,9 +580,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     SDL_EndGPURenderPass(zombie_render_pass);
 
+    game.draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera->update(), uniform_test.projection);
+
     SDL_SubmitGPUCommandBuffer(command_buffer);
-
-
 
     rot += 1.0f;
     return SDL_APP_CONTINUE;
@@ -625,6 +631,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
             mov.x -= 1.0f;
         } else if (event->key.key == SDLK_A) {
             mov.x += 1.0f;
+        }
+
+        if (event->key.key == SDLK_SPACE) {
+            game.send_next_wave();
         }
     }
 
