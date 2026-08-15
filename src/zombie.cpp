@@ -1,5 +1,6 @@
 #include "zombie.hpp"
 #include "gameobject.hpp"
+#include <SDL3/SDL_gpu.h>
 
 
 static std::vector<float> zombie_vertices = {
@@ -70,4 +71,7 @@ void Zombie::upload_buffers(SDL_GPUDevice* device) {
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
     SDL_WaitForGPUIdle(device);
+}
+
+void Zombie::free_buffers(SDL_GPUDevice* device) {
 }

@@ -9,6 +9,8 @@ public:
 
     // DON'T FORGET
     void upload_buffers(SDL_GPUDevice* device);
+    // Does nothing as of yet
+    void free_buffers(SDL_GPUDevice* device);
 
     Uint16 health;
     Uint16 speed;

@@ -28,7 +28,7 @@ struct Game {
 
     void send_next_wave();
     void update_zombies();
-    void draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection);
+    void draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection, SDL_GPUViewport* viewport);
 
     int wave_counter;
     std::vector<Zombie> zombies;

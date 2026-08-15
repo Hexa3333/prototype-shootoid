@@ -266,7 +266,6 @@ SDL_GPUSampler* sampler;
 GameObject* gameobject_test, *gameobject_test2, *gameobject_test3;
 Player* player_test;
 
-std::vector<Zombie> zombie_vector;
 TextureBuffer* zombie_texture;
 
 Game game;
@@ -426,29 +425,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             shared_pipeline);
     player_test->upload_buffers(device);
 
-    zombie_vector.push_back(Zombie(device,
-            zombie_texture,
-            sampler,
-            shared_pipeline));
-    zombie_vector.push_back(Zombie(device,
-            zombie_texture,
-            sampler,
-            shared_pipeline));
-    zombie_vector.push_back(Zombie(device,
-            zombie_texture,
-            sampler,
-            shared_pipeline));
-    zombie_vector.push_back(Zombie(device,
-            zombie_texture,
-            sampler,
-            shared_pipeline));
-
     game = Game(device, window, zombie_texture, sampler, shared_pipeline);
     game.upload_buffers();
-
-    for (auto& z : zombie_vector) {
-        z.upload_buffers(device);
-    }
 
     SDL_GPUTextureCreateInfo depth_texture_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
@@ -567,20 +545,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     SDL_EndGPURenderPass(mermaid_render_pass);
 
-    SDL_GPURenderPass* zombie_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
-
-    float offset = 0.0f;
-    for (auto& zombie : zombie_vector) {
-        zombie.update(glm::vec3(offset, 5, 0));
-        offset += 2.0f;
-        zombie.uniform_mvp.view = camera->update();
-        zombie.uniform_mvp.projection = uniform_test.projection;
-        zombie.draw(command_buffer, zombie_render_pass, &viewport);
-    }
-
-    SDL_EndGPURenderPass(zombie_render_pass);
-
-    game.draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera->update(), uniform_test.projection);
+    game.draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera->update(), uniform_test.projection, &viewport);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
 
