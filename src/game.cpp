@@ -1,6 +1,10 @@
 #include "game.hpp"
 #include <SDL3/SDL_gpu.h>
 #include <array>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 Game::Game() {}
 
@@ -12,6 +16,8 @@ Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureB
      sampler = _sampler;
      pipeline = _pipeline;
      zombies.clear();
+
+     read_wave_data();
 }
 
 Game& Game::operator=(Game&& _game) {
@@ -23,8 +29,44 @@ Game& Game::operator=(Game&& _game) {
     pipeline = _game.pipeline;
     wave_counter = _game.wave_counter;
     zombies = _game.zombies;
+    wave_data = _game.wave_data;
 
     return *this;
+}
+
+#include <iostream>
+void Game::read_wave_data() {
+    std::ifstream input("assets/waves.csv");
+    if (!input.is_open()) {
+        std::cout << "Failed to read waves.csv\n";
+    }
+
+    std::vector<std::vector<std::string>> lines;
+    for (std::string line; std::getline(input, line);) {
+        std::istringstream ss(std::move(line));
+        std::vector<std::string> row;
+
+        for (std::string value; std::getline(ss, value, ',');) {
+            row.push_back(std::move(value));
+        }
+
+        lines.push_back(std::move(row));
+    }
+
+    for (auto& line : lines) {
+        // Skip if #
+        if (line[0][0] == '#') {
+            continue;
+        }
+
+        WaveData _wave_data;
+        _wave_data.wave = static_cast<Uint8>(std::stoi(line[0]));
+        _wave_data.count = static_cast<Uint32>(std::stoi(line[1]));
+        _wave_data.attack_power = static_cast<Uint16>(std::stoi(line[2]));
+        _wave_data.speed = std::stof(line[3]);
+
+        wave_data.push_back(_wave_data);
+    }
 }
 
 // Too expensive
@@ -34,7 +76,6 @@ void Game::upload_buffers() {
     }
 }
 
-#include <iostream>
 void Game::send_next_wave() {
     SDL_WaitForGPUIdle(device);
     Zombie new_zombie(device, zombie_texture, sampler, pipeline);

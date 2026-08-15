@@ -2,10 +2,21 @@
 
 #include "zombie.hpp"
 #include <vector>
+
 struct Game {
     Game();
     Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline);
     Game& operator=(Game&& _game);
+
+    struct WaveData {
+        Uint8 wave;
+        Uint32 count;
+        Uint16 attack_power;
+        float speed;
+    };
+
+    std::vector<WaveData> wave_data;
+    void read_wave_data();
 
     // TODO: Zombie should have its own texture already
     std::shared_ptr<TextureBuffer> zombie_texture;
