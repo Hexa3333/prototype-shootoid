@@ -642,9 +642,13 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     SDL_WaitForGPUIdle(device);
 
     SDL_ReleaseGPUTexture(device, depth_texture);
+    delete buffer_test;
+    delete buffer_instanced_test;
+    delete index_test;
+    delete texture_test;
+    delete gameobject_test;
     delete pipeline_test;
     delete polygon_pipeline_test;
-    delete texture_test;
     SDL_DestroyGPUDevice(device);
     SDL_DestroyWindow(window);
 }

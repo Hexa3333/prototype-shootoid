@@ -9,7 +9,7 @@
 Game::Game() {}
 
 Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline)
- : wave_counter(0) {
+ : wave_counter(1) {
      device = _device;
      window = _window;
      zombie_texture = _zombie_texture;
@@ -72,17 +72,38 @@ void Game::read_wave_data() {
 // Too expensive
 void Game::upload_buffers() {
     for (auto& z : zombies) {
-        z.upload_buffers(device);
+        z->upload_buffers(device);
     }
+}
+
+void Game::release_zombies() {
+    for (auto& z : zombies) {
+        delete z;
+    }
+    zombies.clear();
 }
 
 void Game::send_next_wave() {
     SDL_WaitForGPUIdle(device);
-    Zombie new_zombie(device, zombie_texture, sampler, pipeline);
-    new_zombie.upload_buffers(device);
-    zombies.push_back(new_zombie);
-    
-    std::cout << "Wave " << wave_counter << " sent.\n";
+ 
+    WaveData& wd = wave_data.at(wave_counter-1);
+#if 0
+    std::cout << "Sending wave" << wd.wave << ":\n"
+        "\tcount: " << wd.count << "\n"
+        "\tattack_power: " << wd.attack_power << "\n"
+        "\tspeed: " << wd.speed << "\n";
+#endif
+
+    release_zombies();
+    if (zombies.empty()) {
+        std::cout << "Empty.\n";
+    }
+    for (int i = 0; i < wd.count; ++i) {
+        Zombie* new_zombie = new Zombie(device, zombie_texture, sampler, pipeline);
+        new_zombie->upload_buffers(device);
+        zombies.push_back(new_zombie);
+    }
+
     ++wave_counter;
 }
 
@@ -93,12 +114,13 @@ void Game::update_zombies() {
 void Game::draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection, SDL_GPUViewport* viewport) {
     SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, color_target_info, 1, &stencil_target_info);
 
-    int i = 0;
+    float offset_x = 0.0f;
     for (auto& z : zombies) {
-        z.update(spawn_points[i++]);
-        z.uniform_mvp.view = view;
-        z.uniform_mvp.projection = projection;
-        z.draw(command_buffer, render_pass, viewport);
+        z->update(spawn_points[wave_counter-1] + glm::vec3(-offset_x,0,0));
+        offset_x += 2.0f;
+        z->uniform_mvp.view = view;
+        z->uniform_mvp.projection = projection;
+        z->draw(command_buffer, render_pass, viewport);
     }
     SDL_EndGPURenderPass(render_pass);
 }

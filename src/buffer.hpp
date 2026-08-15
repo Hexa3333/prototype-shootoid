@@ -17,10 +17,16 @@ protected:
 */
 
 
+#include <iostream>
 struct BufferDeleter {
     SDL_GPUDevice* device;
 
     void operator()(SDL_GPUBuffer* buffer) const {
+#if 1
+        static int count = 1;
+        std::cout << "(" << count << ") Releasing buffer" << buffer << "\n";
+        ++count;
+#endif
         SDL_ReleaseGPUBuffer(device, buffer);
     };
 };
