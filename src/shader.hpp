@@ -25,15 +25,24 @@ struct Shader {
     ~Shader();
 };
 
-// Model View Projection information
-struct UniformMVP {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 projection;
+template <typename Derived>
+struct Uniform {
     void push(SDL_GPUCommandBuffer* command_buffer);
 };
 
-struct UniformHUD {
+template <typename Derived>
+void Uniform<Derived>::push(SDL_GPUCommandBuffer* command_buffer) {
+    // slot 0 means binding=0
+    SDL_PushGPUVertexUniformData(command_buffer, 0, static_cast<Derived*>(this), sizeof(Derived));
+}
+
+// Model View Projection information
+struct UniformMVP : Uniform<UniformMVP> {
     glm::mat4 model;
-    void push(SDL_GPUCommandBuffer* command_buffer);
+    glm::mat4 view;
+    glm::mat4 projection;
+};
+
+struct UniformHUD : Uniform<UniformHUD> {
+    glm::mat4 model;
 };

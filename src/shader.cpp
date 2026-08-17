@@ -71,13 +71,3 @@ Shader::~Shader() {
     SDL_ReleaseGPUShader(device, vertex_shader);
     SDL_ReleaseGPUShader(device, fragment_shader);
 }
-
-void UniformMVP::push(SDL_GPUCommandBuffer* command_buffer) {
-    // slot 0 means binding=0
-    SDL_PushGPUVertexUniformData(command_buffer, 0, this, sizeof(*this));
-}
-
-void UniformHUD::push(SDL_GPUCommandBuffer* command_buffer) {
-    // slot 0 means binding=0
-    SDL_PushGPUVertexUniformData(command_buffer, 0, this, sizeof(*this));
-}
