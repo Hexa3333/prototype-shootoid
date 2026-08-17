@@ -113,6 +113,47 @@ void VertexBuffer::stage_for_upload(const std::vector<float>& data) {
     SDL_UnmapGPUTransferBuffer(device, transfer_buffer.get());
 }
 
+VertexBufferHUD::VertexBufferHUD(SDL_GPUDevice* device, const std::vector<float>& data) {
+    this->device = device;
+    size = data.size() * sizeof(float);
+
+    create_vertex_buffer();
+    create_upload_transfer_buffer();
+
+    stage_for_upload(data);
+
+    create_vertex_buffer_attributes();
+    create_vertex_buffer_descriptions();
+}
+
+void VertexBufferHUD::create_vertex_buffer_descriptions() {
+    SDL_GPUVertexBufferDescription description1;
+    description1.slot = 0;
+    description1.pitch = (pitch = 5 * sizeof(float));
+    description1.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+    description1.instance_step_rate = 0;
+
+    vertex_buffer_descriptions.push_back(description1);
+}
+
+void VertexBufferHUD::create_vertex_buffer_attributes() {
+    SDL_GPUVertexAttribute position;
+    position.location = 0;
+    position.buffer_slot = 0;
+    position.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+    position.offset = 0;
+
+    SDL_GPUVertexAttribute uv;
+    uv.location = 1;
+    uv.buffer_slot = 0;
+    uv.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+    uv.offset = 3 * sizeof(float);
+
+    vertex_attributes.push_back(position);
+    vertex_attributes.push_back(uv);
+
+}
+
 VertexBufferInstanced::VertexBufferInstanced(SDL_GPUDevice* _device, const std::vector<float>& _data, const std::vector<float>& instance_data) 
 {
     this->device = _device;
@@ -273,7 +314,7 @@ void IndexBuffer::bind(SDL_GPURenderPass* render_pass) {
 // May be problematic (WARN)
 void IndexBuffer::draw(SDL_GPURenderPass* render_pass) {
     Uint32 num_indices = size / sizeof(Uint32);
-    SDL_DrawGPUIndexedPrimitives(render_pass, num_indices, 2, 0, 0, 0);
+    SDL_DrawGPUIndexedPrimitives(render_pass, num_indices, 1, 0, 0, 0);
 }
 
 void IndexBuffer::create_index_buffer() {

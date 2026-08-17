@@ -83,6 +83,16 @@ protected:
     std::vector<SDL_GPUVertexAttribute> vertex_attributes;
 };
 
+class VertexBufferHUD : public VertexBuffer {
+public:
+    VertexBufferHUD();
+    VertexBufferHUD(SDL_GPUDevice* device, const std::vector<float>& data);
+
+protected:
+    void create_vertex_buffer_descriptions() override;
+    void create_vertex_buffer_attributes() override;
+};
+
 class VertexBufferInstanced : public VertexBuffer {
 public:
     VertexBufferInstanced(SDL_GPUDevice* device, const std::vector<float>& data, const std::vector<float>& instance_data);
