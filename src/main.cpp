@@ -497,6 +497,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
         .x = 0, .y = 0, .w = (float)width, .h = (float)height,
         .min_depth = 0.0f, .max_depth = 1.0f
     };
+    game.viewport = viewport;
 
     static float extra = 0.0f;
     static float rot = 0.0f;
@@ -545,7 +546,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     SDL_EndGPURenderPass(mermaid_render_pass);
 
-    game.draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera->update(), uniform_test.projection, &viewport);
+    game.draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera->update(), uniform_test.projection);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
 

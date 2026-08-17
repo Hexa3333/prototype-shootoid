@@ -109,7 +109,7 @@ void Game::send_next_wave() {
 void Game::update_zombies() {
 }
 
-void Game::draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection, SDL_GPUViewport* viewport) {
+void Game::draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection) {
     SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, color_target_info, 1, &stencil_target_info);
 
     float offset_x = 0.0f;
@@ -118,7 +118,7 @@ void Game::draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTarget
         offset_x += 2.0f;
         z->uniform_mvp.view = view;
         z->uniform_mvp.projection = projection;
-        z->draw(command_buffer, render_pass, viewport);
+        z->draw(command_buffer, render_pass, &viewport);
     }
     SDL_EndGPURenderPass(render_pass);
 }

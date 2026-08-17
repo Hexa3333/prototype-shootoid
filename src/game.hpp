@@ -23,10 +23,13 @@ struct Game {
 
     SDL_Window* window;
     SDL_GPUDevice* device;
+    SDL_GPUViewport viewport;
     SDL_GPUSampler* sampler;
     //std::array<SDL_GPUColorTargetDescription, 2> color_target_desc;
     //std::array<SDL_GPUColorTargetInfo, 2> color_target_infos;
     std::shared_ptr<Pipeline> pipeline;
+
+    std::unique_ptr<VertexBuffer> hud_vertex_buffer;
 
     void upload_buffers();
 
@@ -40,7 +43,7 @@ struct Game {
     void send_next_wave();
     void update_zombies();
     void release_zombies();
-    void draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection, SDL_GPUViewport* viewport);
+    void draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection);
 
     int wave_counter;
     std::vector<Zombie*> zombies;
