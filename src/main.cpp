@@ -37,10 +37,10 @@ SDL_GPUDevice* device;
 
 
 std::vector<float> quad_vertices = {
-     1.0f,  1.0f,  0.0f, 1.0f, 0.0f,  // top right
-     1.0f, -1.0f,  0.0f, 1.0f, 1.0f,  // bot right
-    -1.0f, -1.0f,  0.0f, 0.0f, 1.0f,  // bot left
-    -1.0f,  1.0f,  0.0f, 0.0f, 0.0f,  // top left
+     1.0f,  1.0f,  0.0f,    1.0f, 0.0f,  // top right
+     1.0f, -1.0f,  0.0f,    1.0f, 1.0f,  // bot right
+    -1.0f, -1.0f,  0.0f,    0.0f, 1.0f,  // bot left
+    -1.0f,  1.0f,  0.0f,    0.0f, 0.0f,  // top left
 };
 
 std::vector<Uint32> quad_indices = {
@@ -248,14 +248,14 @@ std::vector<Uint32> mermaid_indices = {
         19, 20, 21, 19, 21, 22,
 };
 
-VertexBuffer* buffer_test;
+VertexBuffer* buffer_test, *quad_buffer_test;
 VertexBufferInstanced* buffer_instanced_test;
-IndexBuffer* index_test;
-TextureBuffer* texture_test;
+IndexBuffer* index_test, *quad_indices_test;
+TextureBuffer* texture_test, *texture_hud_test, *texture_hud_test2;
 UniformMVP uniform_test;
-Shader* shader_test, *shader_instanced_test;
+Shader* shader_test, *shader_instanced_test, *shader_hud_test;
 Camera* camera;
-Pipeline* pipeline_test, *polygon_pipeline_test, *instanced_pipeline_test;
+Pipeline* pipeline_test, *polygon_pipeline_test, *instanced_pipeline_test, *hud_pipeline_test;
 // Viewport-aligned x and y coordinates
 float mouse_x, mouse_y;
 Uint32 window_width, window_height;
@@ -313,14 +313,28 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
     }
+    SDL_Surface* surf5 = SDL_LoadPNG("assets/healthbar.png");
+    if (!surf4) {
+        std::cerr << "Failed to load image.\n";
+        return SDL_APP_FAILURE;
+    }
+    SDL_Surface* surf6 = SDL_LoadPNG("assets/red.png");
+    if (!surf4) {
+        std::cerr << "Failed to load image.\n";
+        return SDL_APP_FAILURE;
+    }
     SDL_Surface* rgba2 = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba = SDL_ConvertSurface(surf2, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba3 = SDL_ConvertSurface(surf3, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba4 = SDL_ConvertSurface(surf4, SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* rgba5 = SDL_ConvertSurface(surf5, SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* rgba6 = SDL_ConvertSurface(surf6, SDL_PIXELFORMAT_RGBA32);
     SDL_DestroySurface(surf);
     SDL_DestroySurface(surf2);
     SDL_DestroySurface(surf3);
     SDL_DestroySurface(surf4);
+    SDL_DestroySurface(surf5);
+    SDL_DestroySurface(surf6);
 
     SDL_GPUSamplerCreateInfo sampler_info{};
     sampler_info.min_filter = SDL_GPU_FILTER_LINEAR;
@@ -339,9 +353,14 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     sampler = SDL_CreateGPUSampler(device, &sampler_info);
 
     buffer_test = new VertexBuffer(device, cube_vertices_indexed);
+    quad_buffer_test = new VertexBuffer(device, quad_vertices);
     buffer_instanced_test = new VertexBufferInstanced(device, quad_vertices_noindex, quad_instance_positions);
+
     index_test = new IndexBuffer(device, cube_indices);
+    quad_indices_test = new IndexBuffer(device, quad_indices);
     texture_test = new TextureBuffer(device, rgba2);
+    texture_hud_test = new TextureBuffer(device, rgba5);
+    texture_hud_test2 = new TextureBuffer(device, rgba6);
     std::shared_ptr<VertexBuffer> shared_buffer_test(new VertexBuffer(device, cube_vertices_indexed));
     std::shared_ptr<VertexBuffer> shared_buffer_test2(new VertexBuffer(device, mermaid_vertices));
     std::shared_ptr<IndexBuffer> shared_index_test(new IndexBuffer(device, cube_indices));
@@ -355,9 +374,13 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
 
     buffer_test->upload(copy_pass);
+    quad_buffer_test->upload(copy_pass);
     buffer_instanced_test->upload(copy_pass);
     index_test->upload(copy_pass);
+    quad_indices_test->upload(copy_pass);
     texture_test->upload(copy_pass);
+    texture_hud_test->upload(copy_pass);
+    texture_hud_test2->upload(copy_pass);
 
     shared_buffer_test->upload(copy_pass);
     shared_buffer_test2->upload(copy_pass);
@@ -384,6 +407,10 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             0,2,0,0,
             1,0,0,0);
 
+    shader_hud_test = new Shader(device, "build/shaders/hud_vertex.spv", "build/shaders/hud_frag.spv",
+            0,1,0,0,
+            1,0,0,0);
+
     std::vector<SDL_GPUColorTargetDescription> color_target_desc;
     color_target_desc.push_back({
             .format = SDL_GetGPUSwapchainTextureFormat(device, window),
@@ -402,6 +429,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0]);
     instanced_pipeline_test = new Pipeline(device, buffer_instanced_test, shader_instanced_test, &color_target_desc[0]);
     polygon_pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0], SDL_GPU_FILLMODE_LINE);
+    hud_pipeline_test = new Pipeline(device, quad_buffer_test, shader_hud_test, &color_target_desc[0]);
 
     std::shared_ptr<Pipeline> shared_pipeline(new Pipeline(device, shared_buffer_test.get(), shader_test, &color_target_desc[0]));
     gameobject_test = new GameObject(shared_buffer_test,
@@ -547,6 +575,36 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_EndGPURenderPass(mermaid_render_pass);
 
     game.draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera->update(), uniform_test.projection);
+
+    SDL_GPURenderPass* hud_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, nullptr);
+    SDL_BindGPUGraphicsPipeline(hud_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*hud_pipeline_test));
+    SDL_SetGPUViewport(hud_render_pass, &viewport);
+
+    quad_buffer_test->bind(hud_render_pass);
+    quad_indices_test->bind(hud_render_pass);
+    texture_hud_test->bind(hud_render_pass, sampler);
+
+    glm::mat4 trans = glm::translate(glm::mat4(1.0f), glm::vec3(-0.6f, 0.8, 0));
+    trans = glm::scale(trans, glm::vec3(0.3f, 0.1f, 1.0f));
+    UniformHUD hud = {
+        .model = trans
+    };
+    hud.push(command_buffer);
+
+    quad_indices_test->draw(hud_render_pass);
+
+    static float damaging = 0.0f;
+    texture_hud_test2->bind(hud_render_pass, sampler);
+    trans = glm::translate(glm::mat4(1.0f), glm::vec3(-0.52f + damaging, 0.8, 0));
+    trans = glm::scale(trans, glm::vec3(0.2f - damaging, 0.06f, 1.0));
+    UniformHUD hud_2 = {
+        .model = trans
+    };
+    hud_2.push(command_buffer);
+    quad_indices_test->draw(hud_render_pass);
+    damaging += 0.0005f;
+
+    SDL_EndGPURenderPass(hud_render_pass);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
 

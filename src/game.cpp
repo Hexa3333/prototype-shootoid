@@ -34,7 +34,6 @@ Game& Game::operator=(Game&& _game) {
     return *this;
 }
 
-#include <iostream>
 void Game::read_wave_data() {
     std::ifstream input("assets/waves.csv");
     if (!input.is_open()) {

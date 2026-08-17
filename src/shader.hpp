@@ -32,3 +32,8 @@ struct UniformMVP {
     glm::mat4 projection;
     void push(SDL_GPUCommandBuffer* command_buffer);
 };
+
+struct UniformHUD {
+    glm::mat4 model;
+    void push(SDL_GPUCommandBuffer* command_buffer);
+};
