@@ -2,19 +2,34 @@
 #include <SDL3/SDL_gpu.h>
 #include <array>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <glm/ext/matrix_transform.hpp>
 
-Game::Game() {}
+Game::Game() {
 
-Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline)
+    // HUD
+    /*
+    Shader hud_shader(device, "build/shaders/hud_vertex.spv", "build/shaders/hud_frag.spv",
+            0,1,0,0,
+            1,0,0,0);
+    auto hud_pipeline1 = std::make_unique<Pipeline>(device, hud_vertex_buffer.get(), hud_shader, &color_target_desc[1]);
+    std::unique_ptr<VertexBuffer> hud_vertex_buffer;
+    std::unique_ptr<IndexBuffer> hud_index_buffer;
+    std::unique_ptr<TextureBuffer> hud_texture_buffer;
+    */
+}
+
+Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline, std::unique_ptr<Pipeline> _hud_pipeline)
  : wave_counter(0) {
      device = _device;
      window = _window;
      zombie_texture = _zombie_texture;
      sampler = _sampler;
      pipeline = _pipeline;
+     hud_pipeline = std::move(_hud_pipeline);
      zombies.clear();
 
      read_wave_data();
@@ -27,6 +42,7 @@ Game& Game::operator=(Game&& _game) {
     zombie_texture = _game.zombie_texture;
     sampler = _game.sampler;
     pipeline = _game.pipeline;
+    hud_pipeline = std::move(_game.hud_pipeline);
     wave_counter = _game.wave_counter;
     zombies = _game.zombies;
     wave_data = _game.wave_data;
@@ -66,6 +82,38 @@ void Game::read_wave_data() {
 
         wave_data.push_back(_wave_data);
     }
+}
+
+void Game::draw_hud(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info) {
+    SDL_GPURenderPass* hud_render_pass = SDL_BeginGPURenderPass(command_buffer, color_target_info, 1, nullptr);
+    SDL_BindGPUGraphicsPipeline(hud_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*hud_pipeline));
+    SDL_SetGPUViewport(hud_render_pass, &viewport);
+
+    hud_vertex_buffer->bind(hud_render_pass);
+    hud_index_buffer->bind(hud_render_pass);
+    hud_texture_buffer->bind(hud_render_pass, sampler);
+
+    glm::mat4 trans = glm::translate(glm::mat4(1.0f), glm::vec3(-0.6f, 0.8, 0));
+    trans = glm::scale(trans, glm::vec3(0.3f, 0.1f, 1.0f));
+    UniformHUD hud = {
+        .model = trans
+    };
+    hud.push(command_buffer);
+
+    hud_index_buffer->draw(hud_render_pass);
+
+    static float damaging = 0.0f;
+    hud_texture_buffer->bind(hud_render_pass, sampler);
+    trans = glm::translate(glm::mat4(1.0f), glm::vec3(-0.52f + damaging, 0.8, 0));
+    trans = glm::scale(trans, glm::vec3(0.2f - damaging, 0.06f, 1.0));
+    UniformHUD hud_2 = {
+        .model = trans
+    };
+    hud_2.push(command_buffer);
+    hud_index_buffer->draw(hud_render_pass);
+    damaging += 0.0005f;
+
+    SDL_EndGPURenderPass(hud_render_pass);
 }
 
 // Too expensive
