@@ -5,8 +5,7 @@
 
 struct Game {
     Game();
-    Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline, std::unique_ptr<Pipeline> _hud_pipeline);
-    Game& operator=(Game&& _game);
+    Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline, SDL_GPUColorTargetDescription* _color_target_desc);
 
     struct WaveData {
         Uint8 wave;
@@ -26,16 +25,17 @@ struct Game {
     SDL_GPUViewport viewport;
     SDL_GPUSampler* sampler;
     std::array<SDL_GPUColorTargetDescription, 2> color_target_desc;
-    //std::array<SDL_GPUColorTargetInfo, 2> color_target_infos;
+    std::array<SDL_GPUColorTargetInfo, 2> color_target_infos;
     std::shared_ptr<Pipeline> pipeline;
 
-    std::unique_ptr<Pipeline> hud_pipeline;
-    std::unique_ptr<VertexBuffer> hud_vertex_buffer;
-    std::unique_ptr<IndexBuffer> hud_index_buffer;
-    std::unique_ptr<TextureBuffer> hud_texture_buffer;
+    VertexBuffer hud_vertex_buffer;
+    IndexBuffer hud_index_buffer;
+    TextureBuffer hud_texture_buffer, hud_texture_buffer2;
+    Pipeline* hud_pipeline;
+    void upload_hud_buffers();
     void draw_hud(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info);
 
-    void upload_buffers();
+    void upload_zombie_buffers();
 
     std::array<glm::vec3, 4> spawn_points = {
         glm::vec3(-5, 0, 0),

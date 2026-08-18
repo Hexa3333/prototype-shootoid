@@ -26,7 +26,6 @@
 #include "pipeline.hpp"
 #include "gameobject.hpp"
 #include "time.hpp"
-#include "zombie.hpp"
 #include "game.hpp"
 
 constexpr bool _DEBUG = true;
@@ -255,7 +254,7 @@ TextureBuffer* texture_test, *texture_hud_test, *texture_hud_test2;
 UniformMVP uniform_test;
 Shader* shader_test, *shader_instanced_test, *shader_hud_test;
 Camera* camera;
-Pipeline* pipeline_test, *polygon_pipeline_test, *instanced_pipeline_test, *hud_pipeline_test;
+Pipeline* pipeline_test, *polygon_pipeline_test, *instanced_pipeline_test, *hud_pipeline;
 // Viewport-aligned x and y coordinates
 float mouse_x, mouse_y;
 Uint32 window_width, window_height;
@@ -268,7 +267,7 @@ Player* player_test;
 
 TextureBuffer* zombie_texture;
 
-Game game;
+Game* game;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::cout << "Initializing...\n";
@@ -429,7 +428,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0]);
     instanced_pipeline_test = new Pipeline(device, buffer_instanced_test, shader_instanced_test, &color_target_desc[0]);
     polygon_pipeline_test = new Pipeline(device, buffer_test, shader_test, &color_target_desc[0], SDL_GPU_FILLMODE_LINE);
-    hud_pipeline_test = new Pipeline(device, quad_buffer_test, shader_hud_test, &color_target_desc[0]);
+    hud_pipeline = new Pipeline(device, quad_buffer_test, shader_hud_test, &color_target_desc[0]);
 
     std::shared_ptr<Pipeline> shared_pipeline(new Pipeline(device, shared_buffer_test.get(), shader_test, &color_target_desc[0]));
     gameobject_test = new GameObject(shared_buffer_test,
@@ -453,8 +452,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             shared_pipeline);
     player_test->upload_buffers(device);
 
-    game = Game(device, window, zombie_texture, sampler, shared_pipeline);
-    game.upload_buffers();
+    game = new Game(device, window, zombie_texture, sampler, shared_pipeline, color_target_desc.data());
+    game->upload_zombie_buffers();
+    game->upload_hud_buffers();
 
     SDL_GPUTextureCreateInfo depth_texture_info = {
         .type = SDL_GPU_TEXTURETYPE_2D,
@@ -525,7 +525,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
         .x = 0, .y = 0, .w = (float)width, .h = (float)height,
         .min_depth = 0.0f, .max_depth = 1.0f
     };
-    game.viewport = viewport;
+    game->viewport = viewport;
 
     static float extra = 0.0f;
     static float rot = 0.0f;
@@ -574,37 +574,8 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     SDL_EndGPURenderPass(mermaid_render_pass);
 
-    game.draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera->update(), uniform_test.projection);
-
-    SDL_GPURenderPass* hud_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, nullptr);
-    SDL_BindGPUGraphicsPipeline(hud_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*hud_pipeline_test));
-    SDL_SetGPUViewport(hud_render_pass, &viewport);
-
-    quad_buffer_test->bind(hud_render_pass);
-    quad_indices_test->bind(hud_render_pass);
-    texture_hud_test->bind(hud_render_pass, sampler);
-
-    glm::mat4 trans = glm::translate(glm::mat4(1.0f), glm::vec3(-0.6f, 0.8, 0));
-    trans = glm::scale(trans, glm::vec3(0.3f, 0.1f, 1.0f));
-    UniformHUD hud = {
-        .model = trans
-    };
-    hud.push(command_buffer);
-
-    quad_indices_test->draw(hud_render_pass);
-
-    static float damaging = 0.0f;
-    texture_hud_test2->bind(hud_render_pass, sampler);
-    trans = glm::translate(glm::mat4(1.0f), glm::vec3(-0.52f + damaging, 0.8, 0));
-    trans = glm::scale(trans, glm::vec3(0.2f - damaging, 0.06f, 1.0));
-    UniformHUD hud_2 = {
-        .model = trans
-    };
-    hud_2.push(command_buffer);
-    quad_indices_test->draw(hud_render_pass);
-    damaging += 0.0005f;
-
-    SDL_EndGPURenderPass(hud_render_pass);
+    game->draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera->update(), uniform_test.projection);
+    game->draw_hud(command_buffer, &color_target_infos[1]);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
 
@@ -658,7 +629,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         }
 
         if (event->key.key == SDLK_SPACE) {
-            game.send_next_wave();
+            game->send_next_wave();
         }
     }
 

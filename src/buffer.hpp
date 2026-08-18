@@ -121,6 +121,7 @@ private:
 
 class IndexBuffer {
 public:
+    IndexBuffer() = default;
     IndexBuffer(SDL_GPUDevice* device, const std::vector<Uint32>& data);
     void upload(SDL_GPUCopyPass* copy_pass);
     void bind(SDL_GPURenderPass* render_pass);
@@ -146,6 +147,7 @@ private:
 // TODO, for example: How to depth texture?
 class TextureBuffer {
 public:
+    TextureBuffer() = default;
     TextureBuffer(SDL_GPUDevice* device, SDL_Surface* surface);
 
     void upload(SDL_GPUCopyPass* copy_pass);

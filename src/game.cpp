@@ -1,5 +1,8 @@
 #include "game.hpp"
+#include "buffer.hpp"
+#include "pipeline.hpp"
 #include <SDL3/SDL_gpu.h>
+#include <SDL3/SDL_surface.h>
 #include <array>
 #include <fstream>
 #include <memory>
@@ -8,46 +11,53 @@
 #include <vector>
 #include <glm/ext/matrix_transform.hpp>
 
-Game::Game() {
+static std::vector<float> hud_quad_vertices = {
+     1.0f,  1.0f,  0.0f,    1.0f, 0.0f,  // top right
+     1.0f, -1.0f,  0.0f,    1.0f, 1.0f,  // bot right
+    -1.0f, -1.0f,  0.0f,    0.0f, 1.0f,  // bot left
+    -1.0f,  1.0f,  0.0f,    0.0f, 0.0f,  // top left
+};
 
+static std::vector<Uint32> hud_quad_indices = {
+    0, 1, 3,
+    1, 2, 3
+};
+
+Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline, SDL_GPUColorTargetDescription* _color_target_desc)
+ : wave_counter(0) {
+    device = _device;
+    window = _window;
+    zombie_texture = _zombie_texture;
+    sampler = _sampler;
+    pipeline = _pipeline;
+    color_target_desc[0] = _color_target_desc[0];
+    color_target_desc[1] = _color_target_desc[1];
+    zombies.clear();
+
+    read_wave_data();
     // HUD
-    /*
+    hud_vertex_buffer = VertexBuffer(device, hud_quad_vertices);
+    hud_index_buffer = IndexBuffer(device, hud_quad_indices);
+    SDL_Surface* healthbar_surface = SDL_LoadPNG("assets/healthbar.png");
+    if (!healthbar_surface) {
+        std::cerr << "Failed to load image.\n";
+    }
+    SDL_Surface* healthbar_bar_surface = SDL_LoadPNG("assets/red.png");
+    if (!healthbar_bar_surface) {
+        std::cerr << "Failed to load image.\n";
+    }
+
+    SDL_Surface* healthbar_surface_converted = SDL_ConvertSurface(healthbar_surface, SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* healthbar_bar_surface_converted = SDL_ConvertSurface(healthbar_bar_surface, SDL_PIXELFORMAT_RGBA32);
+    SDL_DestroySurface(healthbar_surface);
+    SDL_DestroySurface(healthbar_bar_surface);
+    hud_texture_buffer = TextureBuffer(device, healthbar_surface_converted);
+    hud_texture_buffer2 = TextureBuffer(device, healthbar_bar_surface_converted);
+
     Shader hud_shader(device, "build/shaders/hud_vertex.spv", "build/shaders/hud_frag.spv",
             0,1,0,0,
             1,0,0,0);
-    auto hud_pipeline1 = std::make_unique<Pipeline>(device, hud_vertex_buffer.get(), hud_shader, &color_target_desc[1]);
-    std::unique_ptr<VertexBuffer> hud_vertex_buffer;
-    std::unique_ptr<IndexBuffer> hud_index_buffer;
-    std::unique_ptr<TextureBuffer> hud_texture_buffer;
-    */
-}
-
-Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline, std::unique_ptr<Pipeline> _hud_pipeline)
- : wave_counter(0) {
-     device = _device;
-     window = _window;
-     zombie_texture = _zombie_texture;
-     sampler = _sampler;
-     pipeline = _pipeline;
-     hud_pipeline = std::move(_hud_pipeline);
-     zombies.clear();
-
-     read_wave_data();
-}
-
-Game& Game::operator=(Game&& _game) {
-    // TODO: improve
-    device = _game.device;
-    window = _game.window;
-    zombie_texture = _game.zombie_texture;
-    sampler = _game.sampler;
-    pipeline = _game.pipeline;
-    hud_pipeline = std::move(_game.hud_pipeline);
-    wave_counter = _game.wave_counter;
-    zombies = _game.zombies;
-    wave_data = _game.wave_data;
-
-    return *this;
+    hud_pipeline = new Pipeline(device, &hud_vertex_buffer, &hud_shader, &color_target_desc[0]);
 }
 
 void Game::read_wave_data() {
@@ -89,9 +99,9 @@ void Game::draw_hud(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo
     SDL_BindGPUGraphicsPipeline(hud_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*hud_pipeline));
     SDL_SetGPUViewport(hud_render_pass, &viewport);
 
-    hud_vertex_buffer->bind(hud_render_pass);
-    hud_index_buffer->bind(hud_render_pass);
-    hud_texture_buffer->bind(hud_render_pass, sampler);
+    hud_vertex_buffer.bind(hud_render_pass);
+    hud_index_buffer.bind(hud_render_pass);
+    hud_texture_buffer.bind(hud_render_pass, sampler);
 
     glm::mat4 trans = glm::translate(glm::mat4(1.0f), glm::vec3(-0.6f, 0.8, 0));
     trans = glm::scale(trans, glm::vec3(0.3f, 0.1f, 1.0f));
@@ -100,24 +110,39 @@ void Game::draw_hud(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo
     };
     hud.push(command_buffer);
 
-    hud_index_buffer->draw(hud_render_pass);
+    hud_index_buffer.draw(hud_render_pass);
 
     static float damaging = 0.0f;
-    hud_texture_buffer->bind(hud_render_pass, sampler);
+    hud_texture_buffer.bind(hud_render_pass, sampler);
     trans = glm::translate(glm::mat4(1.0f), glm::vec3(-0.52f + damaging, 0.8, 0));
     trans = glm::scale(trans, glm::vec3(0.2f - damaging, 0.06f, 1.0));
     UniformHUD hud_2 = {
         .model = trans
     };
     hud_2.push(command_buffer);
-    hud_index_buffer->draw(hud_render_pass);
+    hud_texture_buffer2.bind(hud_render_pass, sampler);
+    hud_index_buffer.draw(hud_render_pass);
     damaging += 0.0005f;
 
     SDL_EndGPURenderPass(hud_render_pass);
 }
 
+void Game::upload_hud_buffers() {
+    SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
+    SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
+
+    hud_vertex_buffer.upload(copy_pass);
+    hud_index_buffer.upload(copy_pass);
+    hud_texture_buffer.upload(copy_pass);
+    hud_texture_buffer2.upload(copy_pass);
+    SDL_EndGPUCopyPass(copy_pass);
+
+    SDL_SubmitGPUCommandBuffer(command_buffer);
+    SDL_WaitForGPUIdle(device);
+}
+
 // Too expensive
-void Game::upload_buffers() {
+void Game::upload_zombie_buffers() {
     for (auto& z : zombies) {
         z->upload_buffers(device);
     }
