@@ -120,7 +120,6 @@ void Game::draw_hud(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo
     hud_texture_buffer.bind(hud_render_pass, sampler);
     trans = glm::translate(glm::mat4(1.0f), glm::vec3(-0.52f + (dmg*0.2f), 0.801, 0));
     trans = glm::scale(trans, glm::vec3(0.2f - (dmg*0.2f), 0.06f, 1.0));
-    player.health -= 0.000005f;
     UniformHUD hud_2 = {
         .model = trans
     };

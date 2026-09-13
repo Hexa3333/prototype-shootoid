@@ -6,6 +6,17 @@
 #include <SDL3/SDL_gpu.h>
 #include <memory>
 
+struct HitboxAABB {
+    bool compare2(HitboxAABB& other);
+    static bool compare(HitboxAABB& one, HitboxAABB& two) {
+        return one.left   < two.right  &&
+               one.right  > two.left   &&
+               one.top    < two.bottom &&
+               one.bottom > two.top;
+    };
+    float left, right, top, bottom;
+};
+
 class GameObject {
 public:
     GameObject(std::shared_ptr<VertexBuffer> vbuffer,
@@ -23,6 +34,7 @@ public:
     glm::vec3 get_position() const;
     virtual void draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport);
     UniformMVP uniform_mvp;
+    HitboxAABB hitbox;
 protected:
     std::shared_ptr<VertexBuffer> vertex_buffer;
     std::shared_ptr<IndexBuffer> index_buffer;

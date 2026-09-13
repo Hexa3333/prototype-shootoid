@@ -269,6 +269,20 @@ TextureBuffer* zombie_texture;
 Game* game;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
+
+    HitboxAABB box_a = {
+        0, 100,
+        0, 100
+    };
+
+    HitboxAABB box_b = {
+        5, 105,
+        95, 300
+    };
+
+    bool result = box_a.compare2(box_b);
+    std::cout << result << "\n";
+
     std::cout << "Initializing...\n";
     mouse_x = 0.0;
     mouse_y = 0.0;
@@ -477,6 +491,12 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
     DeltaTime::instance().update();
+
+    // Game over
+    if (game->player.health <= 0) {
+        std::cout << "You died.\n";
+        return SDL_APP_SUCCESS;
+    }
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
 
