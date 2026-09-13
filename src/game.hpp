@@ -1,11 +1,12 @@
 #pragma once
 
 #include "zombie.hpp"
+#include "player.hpp"
 #include <vector>
 
 struct Game {
     Game();
-    Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline, SDL_GPUColorTargetDescription* _color_target_desc);
+    Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> player_texture, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline, SDL_GPUColorTargetDescription* _color_target_desc);
 
     struct WaveData {
         Uint8 wave;
@@ -27,6 +28,9 @@ struct Game {
     std::array<SDL_GPUColorTargetDescription, 2> color_target_desc;
     std::array<SDL_GPUColorTargetInfo, 2> color_target_infos;
     std::shared_ptr<Pipeline> pipeline;
+    Player player;
+    void upload_player_buffers();
+    void draw_player(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection);
 
     VertexBuffer hud_vertex_buffer;
     IndexBuffer hud_index_buffer;

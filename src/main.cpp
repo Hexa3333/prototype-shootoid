@@ -263,7 +263,6 @@ SDL_GPUTexture* depth_texture;
 SDL_GPUSampler* sampler;
 
 GameObject* gameobject_test, *gameobject_test2, *gameobject_test3;
-Player* player_test;
 
 TextureBuffer* zombie_texture;
 
@@ -446,13 +445,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
             shared_texture_test2,
             sampler,
             shared_pipeline);
-    player_test = new Player(device,
-            shared_texture_test,
-            sampler,
-            shared_pipeline);
-    player_test->upload_buffers(device);
 
-    game = new Game(device, window, zombie_texture, sampler, shared_pipeline, color_target_desc.data());
+    game = new Game(device, window, shared_texture_test, zombie_texture, sampler, shared_pipeline, color_target_desc.data());
+    game->upload_player_buffers();
     game->upload_zombie_buffers();
     game->upload_hud_buffers();
 
@@ -531,7 +526,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     static float rot = 0.0f;
     // IDEA (TODO) for debug: Draw polygonized version to an image?
 
-    camera->track(player_test);
+    camera->track(&game->player);
     SDL_GPURenderPass* instanced_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[0], 1, &stencil_target_info);
     SDL_BindGPUGraphicsPipeline(instanced_render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*instanced_pipeline_test));
     SDL_SetGPUViewport(instanced_render_pass, &viewport);
@@ -557,14 +552,6 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     SDL_EndGPURenderPass(gameobject_render_pass);
 
-    SDL_GPURenderPass* player_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
-
-    player_test->uniform_mvp.view = camera->update();
-    player_test->uniform_mvp.projection = uniform_test.projection;
-    player_test->draw(command_buffer, player_render_pass, &viewport);
-
-    SDL_EndGPURenderPass(player_render_pass);
-
     SDL_GPURenderPass* mermaid_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
     gameobject_test3->update(glm::translate(glm::mat4(1.0f), glm::vec3(5,0, -1)));
     gameobject_test3->uniform_mvp.view = camera->update();
@@ -574,7 +561,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     SDL_EndGPURenderPass(mermaid_render_pass);
 
-    game->draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera->update(), uniform_test.projection);
+    glm::mat4 camera_view = camera->update();
+    game->draw_zombies(command_buffer, &color_target_infos[1], stencil_target_info, camera_view, uniform_test.projection);
+    game->draw_player(command_buffer, &color_target_infos[1], stencil_target_info, camera_view, uniform_test.projection);
     game->draw_hud(command_buffer, &color_target_infos[1]);
 
     SDL_SubmitGPUCommandBuffer(command_buffer);
@@ -660,11 +649,11 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
         mouse_y = y / window_height;
     }
 
-    player_test->update(mov);
+    game->player.update(mov);
     float distance_from_gameobject_x = mouse_x - 0.5f; // mouse_x - gameobject_x (NDC)
     float distance_from_gameobject_y = mouse_y - 0.5f; // mouse_y - gameobject_y (NDC)
     float angle = std::atan2(distance_from_gameobject_y, distance_from_gameobject_x);
-    player_test->update(angle);
+    game->player.update(angle);
     return SDL_APP_CONTINUE;
 }
 

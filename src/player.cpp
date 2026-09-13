@@ -80,7 +80,7 @@ void Player::upload_buffers(SDL_GPUDevice* device) {
 }
 
 void Player::draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport) {
-    SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline.get()));
+    SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline));
     SDL_SetGPUViewport(render_pass, viewport);
     texture_buffer->bind(render_pass, sampler);
     uniform_mvp.push(command_buffer);

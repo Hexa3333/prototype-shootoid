@@ -23,13 +23,17 @@ static std::vector<Uint32> hud_quad_indices = {
     1, 2, 3
 };
 
-Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline, SDL_GPUColorTargetDescription* _color_target_desc)
- : wave_counter(0) {
+Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureBuffer> player_texture, std::shared_ptr<TextureBuffer> _zombie_texture, SDL_GPUSampler* _sampler, std::shared_ptr<Pipeline> _pipeline, SDL_GPUColorTargetDescription* _color_target_desc)
+ : wave_counter(0),
+   pipeline(_pipeline),
+   player(_device,
+            player_texture,
+            _sampler,
+            pipeline) {
     device = _device;
     window = _window;
     zombie_texture = _zombie_texture;
     sampler = _sampler;
-    pipeline = _pipeline;
     color_target_desc[0] = _color_target_desc[0];
     color_target_desc[1] = _color_target_desc[1];
     zombies.clear();
@@ -127,6 +131,10 @@ void Game::draw_hud(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo
     SDL_EndGPURenderPass(hud_render_pass);
 }
 
+void Game::upload_player_buffers() {
+    player.upload_buffers(device);
+}
+
 void Game::upload_hud_buffers() {
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
@@ -181,8 +189,17 @@ void Game::send_next_wave() {
 void Game::update_zombies() {
 }
 
+void Game::draw_player(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection) {
+    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, color_target_info, 1, &stencil_target_info);
+    player.uniform_mvp.view = view;
+    player.uniform_mvp.projection = projection;
+    player.draw(command_buffer, render_pass, &viewport);
+    SDL_EndGPURenderPass(render_pass);
+}
+
 void Game::draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTargetInfo* color_target_info, SDL_GPUDepthStencilTargetInfo stencil_target_info, glm::mat4 view, glm::mat4 projection) {
     SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, color_target_info, 1, &stencil_target_info);
+    SDL_BindGPUGraphicsPipeline(render_pass, static_cast<SDL_GPUGraphicsPipeline*>(*pipeline));
 
     float offset_x = 0.0f;
     for (auto& z : zombies) {
