@@ -62,10 +62,6 @@ Player::Player(SDL_GPUDevice* device, std::shared_ptr<TextureBuffer> _texture_bu
                  _texture_buffer,
                  sampler,
                  pipeline) {
-    hitbox = {
-        0.4f, 0.6f,
-        0.4f, 0.6f
-    };
 }
 
 // Own command_buffer - Only upload vbuffer and ibuffer, since texture is shared

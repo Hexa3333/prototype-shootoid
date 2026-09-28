@@ -7,7 +7,8 @@ GameObject::GameObject(std::shared_ptr<VertexBuffer> vbuffer,
                std::shared_ptr<IndexBuffer> ibuffer,
                std::shared_ptr<TextureBuffer> tbuffer,
                SDL_GPUSampler* _sampler,
-               std::shared_ptr<Pipeline> _pipeline)
+               std::shared_ptr<Pipeline> _pipeline,
+               HitboxAABB _hitbox)
     : vertex_buffer(vbuffer),
       index_buffer(ibuffer),
       texture_buffer(tbuffer),
@@ -25,6 +26,10 @@ void GameObject::update(glm::vec3 _pos) {
     position = _pos;
     uniform_mvp.model = glm::translate(glm::mat4(1.0f), _pos);
 
+    hitbox.left = _pos.x - 1.0f;
+    hitbox.right = _pos.x + 1.0f;
+    hitbox.bottom = _pos.y - 1.0f;
+    hitbox.top = _pos.y + 1.0f;
     update(uniform_mvp.model);
 }
 

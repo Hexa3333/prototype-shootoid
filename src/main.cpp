@@ -262,7 +262,7 @@ Uint32 window_width, window_height;
 SDL_GPUTexture* depth_texture;
 SDL_GPUSampler* sampler;
 
-GameObject* gameobject_test, *gameobject_test2, *gameobject_test3;
+GameObject* gameobject_hitbox_test, *gameobject_hitbox_test2, *gameobject_test3;
 
 TextureBuffer* zombie_texture;
 
@@ -335,18 +335,25 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         std::cerr << "Failed to load image.\n";
         return SDL_APP_FAILURE;
     }
+    SDL_Surface* surf7 = SDL_LoadPNG("assets/hitbox_box.png");
+    if (!surf4) {
+        std::cerr << "Failed to load image.\n";
+        return SDL_APP_FAILURE;
+    }
     SDL_Surface* rgba2 = SDL_ConvertSurface(surf, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba = SDL_ConvertSurface(surf2, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba3 = SDL_ConvertSurface(surf3, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba4 = SDL_ConvertSurface(surf4, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba5 = SDL_ConvertSurface(surf5, SDL_PIXELFORMAT_RGBA32);
     SDL_Surface* rgba6 = SDL_ConvertSurface(surf6, SDL_PIXELFORMAT_RGBA32);
+    SDL_Surface* rgba7 = SDL_ConvertSurface(surf7, SDL_PIXELFORMAT_RGBA32);
     SDL_DestroySurface(surf);
     SDL_DestroySurface(surf2);
     SDL_DestroySurface(surf3);
     SDL_DestroySurface(surf4);
     SDL_DestroySurface(surf5);
     SDL_DestroySurface(surf6);
+    SDL_DestroySurface(surf7);
 
     SDL_GPUSamplerCreateInfo sampler_info{};
     sampler_info.min_filter = SDL_GPU_FILTER_LINEAR;
@@ -378,6 +385,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     std::shared_ptr<IndexBuffer> shared_index_test(new IndexBuffer(device, cube_indices));
     std::shared_ptr<IndexBuffer> shared_index_test2(new IndexBuffer(device, mermaid_indices));
     std::shared_ptr<TextureBuffer> shared_texture_test(new TextureBuffer(device, rgba));
+    std::shared_ptr<TextureBuffer> shared_texture_hitbox_box(new TextureBuffer(device, rgba7));
     std::shared_ptr<TextureBuffer> shared_texture_test2(new TextureBuffer(device, rgba4));
 
     std::shared_ptr<TextureBuffer> zombie_texture(new TextureBuffer(device, rgba3));
@@ -400,6 +408,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     shared_index_test2->upload(copy_pass);
     shared_texture_test->upload(copy_pass);
     shared_texture_test2->upload(copy_pass);
+    shared_texture_hitbox_box->upload(copy_pass);
 
     zombie_texture->upload(copy_pass);
 
@@ -444,14 +453,14 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     hud_pipeline = new Pipeline(device, quad_buffer_test, shader_hud_test, &color_target_desc[0]);
 
     std::shared_ptr<Pipeline> shared_pipeline(new Pipeline(device, shared_buffer_test.get(), shader_test, &color_target_desc[0]));
-    gameobject_test = new GameObject(shared_buffer_test,
+    gameobject_hitbox_test = new GameObject(shared_buffer_test,
             shared_index_test,
-            shared_texture_test,
+            shared_texture_hitbox_box,
             sampler,
             shared_pipeline);
-    gameobject_test2 = new GameObject(shared_buffer_test,
+    gameobject_hitbox_test2 = new GameObject(shared_buffer_test,
             shared_index_test,
-            shared_texture_test,
+            shared_texture_hitbox_box,
             sampler,
             shared_pipeline);
     gameobject_test3 = new GameObject(shared_buffer_test2,
@@ -564,11 +573,29 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_EndGPURenderPass(instanced_render_pass);
 
     SDL_GPURenderPass* gameobject_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
-    gameobject_test->update(glm::mat4(1.0f));
-    gameobject_test->uniform_mvp.view = camera->update();
-    gameobject_test->uniform_mvp.projection = uniform_test.projection;
+    glm::vec3 go_position = glm::vec3(0,1,0);
+    gameobject_hitbox_test->update(go_position);
+    gameobject_hitbox_test->uniform_mvp.view = camera->update();
+    gameobject_hitbox_test->uniform_mvp.projection = uniform_test.projection;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
-    gameobject_test->draw(command_buffer, gameobject_render_pass, &viewport);
+    gameobject_hitbox_test->draw(command_buffer, gameobject_render_pass, &viewport);
+    std::cout << "1: " << gameobject_hitbox_test->hitbox.bottom << " " << gameobject_hitbox_test->hitbox.top << "\n";
+
+
+    static float up = 0.001f;
+    glm::vec3 go2_position = glm::vec3(0,-1.0,0);
+    up += 0.001f;
+    gameobject_hitbox_test2->update(go2_position);
+    gameobject_hitbox_test2->uniform_mvp.view = camera->update();
+    gameobject_hitbox_test2->uniform_mvp.projection = uniform_test.projection;
+    SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
+    gameobject_hitbox_test2->draw(command_buffer, gameobject_render_pass, &viewport);
+    std::cout << "2: " << gameobject_hitbox_test2->hitbox.bottom << " " << gameobject_hitbox_test2->hitbox.top << "\n";
+
+    //std::cout << "Hitbox:\n" <<
+    //    "left: " << gameobject_hitbox_test2->hitbox.left << ", right: " << gameobject_hitbox_test2->hitbox.right << "\n";
+    bool hit = HitboxAABB::compare(gameobject_hitbox_test->hitbox, gameobject_hitbox_test2->hitbox);
+    //std::cout << "Hit: " << hit << "\n";
 
     SDL_EndGPURenderPass(gameobject_render_pass);
 
@@ -685,7 +712,7 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     delete buffer_instanced_test;
     delete index_test;
     delete texture_test;
-    delete gameobject_test;
+    delete gameobject_hitbox_test;
     delete pipeline_test;
     delete polygon_pipeline_test;
     SDL_DestroyGPUDevice(device);

@@ -23,7 +23,8 @@ public:
                std::shared_ptr<IndexBuffer> ibuffer,
                std::shared_ptr<TextureBuffer> tbuffer,
                SDL_GPUSampler* _sampler,
-               std::shared_ptr<Pipeline> _pipeline);
+               std::shared_ptr<Pipeline> _pipeline,
+               HitboxAABB _hitbox = {0});
 
     virtual void update(glm::mat4 model);
     // does the math, passes to update(glm::mat4 model)
