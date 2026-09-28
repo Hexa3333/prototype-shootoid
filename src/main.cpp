@@ -573,29 +573,31 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     SDL_EndGPURenderPass(instanced_render_pass);
 
     SDL_GPURenderPass* gameobject_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
-    glm::vec3 go_position = glm::vec3(0,1,0);
+    glm::vec3 go_position = glm::vec3(0,0,0);
     gameobject_hitbox_test->update(go_position);
     gameobject_hitbox_test->uniform_mvp.view = camera->update();
     gameobject_hitbox_test->uniform_mvp.projection = uniform_test.projection;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
     gameobject_hitbox_test->draw(command_buffer, gameobject_render_pass, &viewport);
-    std::cout << "1: " << gameobject_hitbox_test->hitbox.bottom << " " << gameobject_hitbox_test->hitbox.top << "\n";
+    std::cout << "1: " << gameobject_hitbox_test->hitbox.bottom << " " << gameobject_hitbox_test->hitbox.top << "\t"
+                       << gameobject_hitbox_test2->hitbox.left << " " << gameobject_hitbox_test2->hitbox.right << "\n";
 
 
     static float up = 0.001f;
-    glm::vec3 go2_position = glm::vec3(0,-1.0,0);
-    up += 0.001f;
+    glm::vec3 go2_position = glm::vec3(-1.2f + up,0,0);
+    up += 0.005f;
     gameobject_hitbox_test2->update(go2_position);
     gameobject_hitbox_test2->uniform_mvp.view = camera->update();
     gameobject_hitbox_test2->uniform_mvp.projection = uniform_test.projection;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
     gameobject_hitbox_test2->draw(command_buffer, gameobject_render_pass, &viewport);
-    std::cout << "2: " << gameobject_hitbox_test2->hitbox.bottom << " " << gameobject_hitbox_test2->hitbox.top << "\n";
+    std::cout << "2: " << gameobject_hitbox_test2->hitbox.bottom << " " << gameobject_hitbox_test2->hitbox.top << "\t"
+                       << gameobject_hitbox_test2->hitbox.left << " " << gameobject_hitbox_test2->hitbox.right << "\n";
 
     //std::cout << "Hitbox:\n" <<
     //    "left: " << gameobject_hitbox_test2->hitbox.left << ", right: " << gameobject_hitbox_test2->hitbox.right << "\n";
     bool hit = HitboxAABB::compare(gameobject_hitbox_test->hitbox, gameobject_hitbox_test2->hitbox);
-    //std::cout << "Hit: " << hit << "\n";
+    std::cout << "Hit: " << hit << "\n";
 
     SDL_EndGPURenderPass(gameobject_render_pass);
 

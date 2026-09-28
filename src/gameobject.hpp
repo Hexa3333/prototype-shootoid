@@ -9,10 +9,8 @@
 struct HitboxAABB {
     bool compare2(HitboxAABB& other);
     static bool compare(HitboxAABB& one, HitboxAABB& two) {
-        return one.left   < two.right  &&
-               one.right  > two.left   &&
-               one.top    < two.bottom &&
-               one.bottom > two.top;
+        return one.top > two.bottom && one.bottom < two.top &&
+               one.left < two.right && one.right > two.left;
     };
     float left, right, top, bottom;
 };
