@@ -55,8 +55,6 @@ void GameObject::draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* r
 }
 
 bool HitboxAABB::compare2(HitboxAABB& other) {
-    return left   < other.right  &&
-           right  > other.left   &&
-           top    < other.bottom &&
-           bottom > other.top;
+    return top >  other.bottom && bottom < other.top &&
+           left < other.right &&  right >  other.left;
 }

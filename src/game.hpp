@@ -55,4 +55,6 @@ struct Game {
 
     int wave_counter;
     std::vector<Zombie*> zombies;
+
+    void check_zombies_against_player();
 };

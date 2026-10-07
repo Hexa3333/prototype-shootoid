@@ -579,8 +579,8 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     gameobject_hitbox_test->uniform_mvp.projection = uniform_test.projection;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
     gameobject_hitbox_test->draw(command_buffer, gameobject_render_pass, &viewport);
-    std::cout << "1: " << gameobject_hitbox_test->hitbox.bottom << " " << gameobject_hitbox_test->hitbox.top << "\t"
-                       << gameobject_hitbox_test2->hitbox.left << " " << gameobject_hitbox_test2->hitbox.right << "\n";
+    //std::cout << "1: " << gameobject_hitbox_test->hitbox.bottom << " " << gameobject_hitbox_test->hitbox.top << "\t"
+    //                   << gameobject_hitbox_test2->hitbox.left << " " << gameobject_hitbox_test2->hitbox.right << "\n";
 
 
     static float up = 0.001f;
@@ -591,15 +591,17 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     gameobject_hitbox_test2->uniform_mvp.projection = uniform_test.projection;
     SDL_PushGPUVertexUniformData(command_buffer, 1, &extra, sizeof(float));
     gameobject_hitbox_test2->draw(command_buffer, gameobject_render_pass, &viewport);
-    std::cout << "2: " << gameobject_hitbox_test2->hitbox.bottom << " " << gameobject_hitbox_test2->hitbox.top << "\t"
-                       << gameobject_hitbox_test2->hitbox.left << " " << gameobject_hitbox_test2->hitbox.right << "\n";
+    //std::cout << "2: " << gameobject_hitbox_test2->hitbox.bottom << " " << gameobject_hitbox_test2->hitbox.top << "\t"
+    //                   << gameobject_hitbox_test2->hitbox.left << " " << gameobject_hitbox_test2->hitbox.right << "\n";
 
     //std::cout << "Hitbox:\n" <<
     //    "left: " << gameobject_hitbox_test2->hitbox.left << ", right: " << gameobject_hitbox_test2->hitbox.right << "\n";
-    bool hit = HitboxAABB::compare(gameobject_hitbox_test->hitbox, gameobject_hitbox_test2->hitbox);
-    std::cout << "Hit: " << hit << "\n";
+    bool hit = HitboxAABB::compare(gameobject_hitbox_test->hitbox, game->player.hitbox);
+    //std::cout << "Hit: " << hit << "\n";
 
     SDL_EndGPURenderPass(gameobject_render_pass);
+
+    game->check_zombies_against_player();
 
     SDL_GPURenderPass* mermaid_render_pass = SDL_BeginGPURenderPass(command_buffer, &color_target_infos[1], 1, &stencil_target_info);
     gameobject_test3->update(glm::translate(glm::mat4(1.0f), glm::vec3(5,0, -1)));
