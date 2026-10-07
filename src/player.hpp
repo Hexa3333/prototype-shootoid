@@ -11,7 +11,7 @@ struct Player : public GameObject {
     void draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport) override;
 
     int max_health;
-    int health;
+    //  health
 
     int max_speed;
     int speed;
@@ -22,4 +22,7 @@ struct Player : public GameObject {
     glm::vec3 look_direction;
     int max_turn_speed;
     int turn_speed;
+    
+    // IDEA
+    void damage(int dmg);
 };

@@ -52,7 +52,7 @@ static std::vector<Uint32> player_indices = {
 
 
 Player::Player(SDL_GPUDevice* device, std::shared_ptr<TextureBuffer> _texture_buffer, SDL_GPUSampler* sampler, std::shared_ptr<Pipeline>pipeline)
-    : max_health (100), health (100),
+    : max_health (100),
       max_speed  (100), speed  (100),
       max_stamina(100), stamina(100),
       look_direction(glm::vec3(0,0.8,0.4)),

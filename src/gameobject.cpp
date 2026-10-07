@@ -13,7 +13,9 @@ GameObject::GameObject(std::shared_ptr<VertexBuffer> vbuffer,
       index_buffer(ibuffer),
       texture_buffer(tbuffer),
       sampler(_sampler),
-      pipeline(_pipeline) {
+      pipeline(_pipeline),
+      health(GameObject::default_gameobject_health),
+      hitbox_enabled(true) {
 }
 
 void GameObject::update(glm::mat4 model) {

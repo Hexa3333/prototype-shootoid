@@ -214,6 +214,12 @@ void Game::draw_zombies(SDL_GPUCommandBuffer* command_buffer, SDL_GPUColorTarget
 void Game::check_zombies_against_player() {
     for (auto& z : zombies) {
         bool hit = z->hitbox.compare2(player.hitbox);
-        std::cout << "Hit: " << std::noboolalpha << hit << "\n";
+        //std::cout << "Hit: " << std::noboolalpha << hit << "\n";
+        if (z->hitbox_enabled && hit) {
+            player.health -= 10;
+            std::cout << player.health << "\n";
+
+            z->hitbox_enabled = false;
+        }
     }
 }

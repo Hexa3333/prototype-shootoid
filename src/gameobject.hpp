@@ -32,8 +32,12 @@ public:
     virtual void update(float angle);
     glm::vec3 get_position() const;
     virtual void draw(SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUViewport* viewport);
+
+    static constexpr int default_gameobject_health = 100;
+    int health;
     UniformMVP uniform_mvp;
     HitboxAABB hitbox;
+    bool hitbox_enabled;
 protected:
     std::shared_ptr<VertexBuffer> vertex_buffer;
     std::shared_ptr<IndexBuffer> index_buffer;
