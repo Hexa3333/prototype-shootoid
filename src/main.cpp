@@ -1,6 +1,8 @@
 #include "player.hpp"
+#include <SDL3/SDL_audio.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_gpu.h>
+#include <SDL3/SDL_init.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_surface.h>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -266,24 +268,18 @@ GameObject* gameobject_hitbox_test, *gameobject_hitbox_test2, *gameobject_test3;
 
 TextureBuffer* zombie_texture;
 
+SDL_AudioStream* audio_stream;
+Uint8* wav_data;
+Uint32 wav_length;
 Game* game;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
-    HitboxAABB box_a = {
-        0, 100,
-        0, 100
-    };
-
-    HitboxAABB box_b = {
-        5, 105,
-        95, 300
-    };
-
-    bool result = box_a.compare2(box_b);
-    std::cout << result << "\n";
-
     std::cout << "Initializing...\n";
+    if (!SDL_Init(SDL_INIT_AUDIO)) {
+        std::cout << SDL_GetError() << "\n";
+        return SDL_APP_FAILURE;
+    }
     mouse_x = 0.0;
     mouse_y = 0.0;
     window_width = 720;
@@ -304,6 +300,21 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     
     std::cout << "Has spirv: " << has_spirv << "\n"
               << "2D RGB unorm support: " << texture_format_supported << "\n";
+
+    // Audio
+    SDL_AudioSpec spec;
+    if (!SDL_LoadWAV("assets/this_is_the_new_shit.wav", &spec, &wav_data, &wav_length)) {
+        std::cout << SDL_GetError() << "\n";
+        return SDL_APP_FAILURE;
+    }
+
+    audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+    if (!audio_stream) {
+        SDL_Log("Couldn't create audio stream: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
+    SDL_ResumeAudioStreamDevice(audio_stream);
 
     SDL_Surface* surf = SDL_LoadPNG("assets/background.png");
     if (!surf) {
@@ -505,6 +516,11 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     if (game->player.health <= 0) {
         std::cout << "You died.\n";
         return SDL_APP_SUCCESS;
+    }
+
+    if (SDL_GetAudioStreamQueued(audio_stream) < (int)wav_length) {
+        /* feed more data to the stream. It will queue at the end, and trickle out as the hardware needs more data. */
+        SDL_PutAudioStreamData(audio_stream, wav_data, wav_length);
     }
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
@@ -719,6 +735,8 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     delete gameobject_hitbox_test;
     delete pipeline_test;
     delete polygon_pipeline_test;
+    SDL_DestroyAudioStream(audio_stream);
+    SDL_free(wav_data);
     SDL_DestroyGPUDevice(device);
     SDL_DestroyWindow(window);
 }
