@@ -268,9 +268,6 @@ GameObject* gameobject_hitbox_test, *gameobject_hitbox_test2, *gameobject_test3;
 
 TextureBuffer* zombie_texture;
 
-SDL_AudioStream* audio_stream;
-Uint8* wav_data;
-Uint32 wav_length;
 Game* game;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
@@ -300,21 +297,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     
     std::cout << "Has spirv: " << has_spirv << "\n"
               << "2D RGB unorm support: " << texture_format_supported << "\n";
-
-    // Audio
-    SDL_AudioSpec spec;
-    if (!SDL_LoadWAV("assets/this_is_the_new_shit.wav", &spec, &wav_data, &wav_length)) {
-        std::cout << SDL_GetError() << "\n";
-        return SDL_APP_FAILURE;
-    }
-
-    audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
-    if (!audio_stream) {
-        SDL_Log("Couldn't create audio stream: %s", SDL_GetError());
-        return SDL_APP_FAILURE;
-    }
-
-    SDL_ResumeAudioStreamDevice(audio_stream);
 
     SDL_Surface* surf = SDL_LoadPNG("assets/background.png");
     if (!surf) {
@@ -518,10 +500,12 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
         return SDL_APP_SUCCESS;
     }
 
+    // Vestige
+    /*
     if (SDL_GetAudioStreamQueued(audio_stream) < (int)wav_length) {
-        /* feed more data to the stream. It will queue at the end, and trickle out as the hardware needs more data. */
         SDL_PutAudioStreamData(audio_stream, wav_data, wav_length);
     }
+    */
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
 
@@ -735,8 +719,6 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     delete gameobject_hitbox_test;
     delete pipeline_test;
     delete polygon_pipeline_test;
-    SDL_DestroyAudioStream(audio_stream);
-    SDL_free(wav_data);
     SDL_DestroyGPUDevice(device);
     SDL_DestroyWindow(window);
 }
