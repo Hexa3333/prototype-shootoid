@@ -37,11 +37,18 @@ Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureB
     window = _window;
     zombie_texture = _zombie_texture;
     sampler = _sampler;
-    SDL_AudioSpec spec;
-    spec.format = SDL_AUDIO_U8;
-    spec.channels = 1;
-    spec.freq = 8000;
-    audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
+
+    /* INFO: Accepted audio spec
+     * 16 bit LE
+     * stereo
+     * 4800Hz
+    */
+    SDL_AudioSpec accepted_audio_spec;
+    accepted_audio_spec.format = SDL_AUDIO_S16LE;
+    accepted_audio_spec.channels = 2;
+    accepted_audio_spec.freq = 48000;
+
+    audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &accepted_audio_spec, nullptr, nullptr);
     if (!audio_stream) {
         SDL_Log("Couldn't create audio stream: %s", SDL_GetError());
     }

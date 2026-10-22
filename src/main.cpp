@@ -270,6 +270,9 @@ TextureBuffer* zombie_texture;
 
 Game* game;
 
+Uint8* wav_data;
+Uint32 wav_length;
+
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     std::cout << "Initializing...\n";
@@ -488,6 +491,12 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     uniform_test.projection = glm::mat4(1.0f);
     uniform_test.projection = glm::perspective(glm::radians(45.0f), (float)window_width / (float)window_height, 0.1f, 100.0f);
 
+    SDL_AudioSpec _nophono;
+    if (!SDL_LoadWAV("assets/this_is_the_new_shit.wav", &_nophono, &wav_data, &wav_length)) {
+        SDL_Log("Couldn't load .wav file: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
     return SDL_APP_CONTINUE;
 }
 
@@ -501,11 +510,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     }
 
     // Vestige
-    /*
-    if (SDL_GetAudioStreamQueued(audio_stream) < (int)wav_length) {
-        SDL_PutAudioStreamData(audio_stream, wav_data, wav_length);
+    if (SDL_GetAudioStreamQueued(game->audio_stream) < (int)wav_length) {
+        SDL_PutAudioStreamData(game->audio_stream, wav_data, wav_length);
     }
-    */
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
 
