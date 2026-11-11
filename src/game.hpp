@@ -26,7 +26,7 @@ struct Game {
     SDL_GPUDevice* device;
     SDL_GPUViewport viewport;
     SDL_GPUSampler* sampler;
-    SDL_AudioStream* audio_stream;
+    std::vector<SDL_AudioStream*> audio_streams;
     std::array<SDL_GPUColorTargetDescription, 2> color_target_desc;
     std::array<SDL_GPUColorTargetInfo, 2> color_target_infos;
     std::shared_ptr<Pipeline> pipeline;

@@ -1,3 +1,4 @@
+#include "audio.hpp"
 #include "player.hpp"
 #include <SDL3/SDL_audio.h>
 #include <SDL3/SDL_error.h>
@@ -273,6 +274,8 @@ Game* game;
 Uint8* wav_data;
 Uint32 wav_length;
 
+SoundWAV* snake_eater;
+
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 
     std::cout << "Initializing...\n";
@@ -492,10 +495,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     uniform_test.projection = glm::perspective(glm::radians(45.0f), (float)window_width / (float)window_height, 0.1f, 100.0f);
 
     SDL_AudioSpec _nophono;
-    if (!SDL_LoadWAV("assets/this_is_the_new_shit.wav", &_nophono, &wav_data, &wav_length)) {
+    if (!SDL_LoadWAV("assets/sounds/this_is_the_new_shit.wav", &_nophono, &wav_data, &wav_length)) {
         SDL_Log("Couldn't load .wav file: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+    snake_eater = new SoundWAV(game->audio_streams);
 
     return SDL_APP_CONTINUE;
 }
@@ -510,9 +514,10 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
     }
 
     // Vestige
-    if (SDL_GetAudioStreamQueued(game->audio_stream) < (int)wav_length) {
-        SDL_PutAudioStreamData(game->audio_stream, wav_data, wav_length);
+    if (SDL_GetAudioStreamQueued(game->audio_streams[0]) < (int)wav_length) {
+        SDL_PutAudioStreamData(game->audio_streams[0], wav_data, wav_length);
     }
+    //snake_eater->play_queued();
 
     SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
 

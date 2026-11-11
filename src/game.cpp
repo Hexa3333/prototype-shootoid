@@ -48,11 +48,11 @@ Game::Game(SDL_GPUDevice* _device, SDL_Window* _window, std::shared_ptr<TextureB
     accepted_audio_spec.channels = 2;
     accepted_audio_spec.freq = 48000;
 
-    audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &accepted_audio_spec, nullptr, nullptr);
-    if (!audio_stream) {
+    audio_streams.push_back(SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &accepted_audio_spec, nullptr, nullptr));
+    if (!audio_streams[0]) {
         SDL_Log("Couldn't create audio stream: %s", SDL_GetError());
     }
-    SDL_ResumeAudioStreamDevice(audio_stream);
+    SDL_ResumeAudioStreamDevice(audio_streams[0]);
     
     color_target_desc[0] = _color_target_desc[0];
     color_target_desc[1] = _color_target_desc[1];
